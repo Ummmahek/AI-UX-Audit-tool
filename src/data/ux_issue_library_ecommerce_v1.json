@@ -1,0 +1,1442 @@
+{
+  "version": "1.0",
+  "domain": "ecommerce",
+  "issues": [
+    {
+      "issue_id": "UX-001",
+      "domain": "ecommerce",
+      "page_type": [
+        "Homepage"
+      ],
+      "issue_title": "Early intrusive pop-ups",
+      "user_problem": "Users are interrupted before understanding the site",
+      "dot_criterion": "User control & freedom",
+      "nielsen_heuristic": [
+        "User control & freedom"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "modal/popup appears on first load",
+        "permission prompt shown before first interaction"
+      ],
+      "recommendation": "Delay permission pop-ups until user intent is clear",
+      "acceptance_criteria": [
+        "No pop-ups appear before first meaningful interaction"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.52
+    },
+    {
+      "issue_id": "UX-002",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global"
+      ],
+      "issue_title": "Hidden language selector",
+      "user_problem": "Users struggle to change language/location",
+      "dot_criterion": "Navigation & discoverability",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "language selector not visible in header",
+        "language change only available in deep menu"
+      ],
+      "recommendation": "Move language selector to header with clear icon",
+      "acceptance_criteria": [
+        "Language selector visible on all pages in header"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77
+    },
+    {
+      "issue_id": "UX-003",
+      "domain": "ecommerce",
+      "page_type": [
+        "Homepage"
+      ],
+      "issue_title": "CTA overload",
+      "user_problem": "Too many CTAs overwhelm users",
+      "dot_criterion": "Information hierarchy",
+      "nielsen_heuristic": [
+        "Aesthetic & minimalist design"
+      ],
+      "severity": "Major",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "multiple primary buttons with same style",
+        "primary action not visually dominant"
+      ],
+      "recommendation": "Reduce CTAs and establish hierarchy",
+      "acceptance_criteria": [
+        "One primary CTA visually dominant"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77
+    },
+    {
+      "issue_id": "UX-004",
+      "domain": "ecommerce",
+      "page_type": [
+        "PLP"
+      ],
+      "issue_title": "Inconsistent product cards",
+      "user_problem": "Users struggle to scan products",
+      "dot_criterion": "Consistency",
+      "nielsen_heuristic": [
+        "Consistency & standards"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "issue observed on PLP via screenshot/DOM inspection"
+      ],
+      "recommendation": "Standardize card layout and CTA placement",
+      "acceptance_criteria": [
+        "All cards follow same layout"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.52
+    },
+    {
+      "issue_id": "UX-005",
+      "domain": "ecommerce",
+      "page_type": [
+        "PDP"
+      ],
+      "issue_title": "Missing policy info near title",
+      "user_problem": "Users lack trust before purchase",
+      "dot_criterion": "Trust & credibility",
+      "nielsen_heuristic": [
+        "Help users recover"
+      ],
+      "severity": "Major",
+      "evidence_type": "Analytics",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "issue observed on PDP via screenshot/DOM inspection"
+      ],
+      "recommendation": "Show shipping/returns near product title",
+      "acceptance_criteria": [
+        "Policies visible without scrolling"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": false,
+      "confidence_weight": 0.77
+    },
+    {
+      "issue_id": "UX-006",
+      "domain": "ecommerce",
+      "page_type": [
+        "PDP"
+      ],
+      "issue_title": "Unclear add-to-cart flow",
+      "user_problem": "Users don’t know required steps",
+      "dot_criterion": "Error prevention",
+      "nielsen_heuristic": [
+        "Error prevention"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "issue observed on PDP via screenshot/DOM inspection"
+      ],
+      "recommendation": "Guide users step-by-step before add to cart",
+      "acceptance_criteria": [
+        "System guides user through selections"
+      ],
+      "requires_checkout": false,
+      "requires_cart": true,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.64
+    },
+    {
+      "issue_id": "UX-007",
+      "domain": "ecommerce",
+      "page_type": [
+        "Cart"
+      ],
+      "issue_title": "Forced cart redirection",
+      "user_problem": "Users cannot continue shopping",
+      "dot_criterion": "Flexibility & efficiency",
+      "nielsen_heuristic": [
+        "Flexibility of use"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Analytics",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "issue observed on Cart via screenshot/DOM inspection"
+      ],
+      "recommendation": "Use add-to-cart overlay with continue shopping",
+      "acceptance_criteria": [
+        "Overlay allows continue shopping"
+      ],
+      "requires_checkout": false,
+      "requires_cart": true,
+      "visual_confirmation_required": false,
+      "confidence_weight": 0.63
+    },
+    {
+      "issue_id": "UX-008",
+      "domain": "ecommerce",
+      "page_type": [
+        "Checkout"
+      ],
+      "issue_title": "Misleading progress indicator",
+      "user_problem": "Users misjudge checkout length",
+      "dot_criterion": "Visibility of status",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "Major",
+      "evidence_type": "Analytics",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "step indicator missing/mismatched",
+        "remaining steps unclear"
+      ],
+      "recommendation": "Align progress bar with real steps",
+      "acceptance_criteria": [
+        "Progress steps match actual flow"
+      ],
+      "requires_checkout": true,
+      "requires_cart": false,
+      "visual_confirmation_required": false,
+      "confidence_weight": 0.77
+    },
+    {
+      "issue_id": "UX-009",
+      "domain": "ecommerce",
+      "page_type": [
+        "Checkout"
+      ],
+      "issue_title": "Limited payment methods",
+      "user_problem": "Users abandon due to missing options",
+      "dot_criterion": "Flexibility",
+      "nielsen_heuristic": [
+        "Flexibility & efficiency"
+      ],
+      "severity": "Major",
+      "evidence_type": "Analytics",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "issue observed on Checkout via screenshot/DOM inspection"
+      ],
+      "recommendation": "Add Apple Pay, COD, wallets",
+      "acceptance_criteria": [
+        "Multiple payment methods available"
+      ],
+      "requires_checkout": true,
+      "requires_cart": false,
+      "visual_confirmation_required": false,
+      "confidence_weight": 0.64
+    },
+    {
+      "issue_id": "UX-010",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global"
+      ],
+      "issue_title": "Inconsistent CTA styles",
+      "user_problem": "Users can’t identify primary actions",
+      "dot_criterion": "Consistency",
+      "nielsen_heuristic": [
+        "Consistency & standards"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "multiple primary buttons with same style",
+        "primary action not visually dominant"
+      ],
+      "recommendation": "Define and enforce CTA styles",
+      "acceptance_criteria": [
+        "Primary CTA consistent across site"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.63
+    },
+    {
+      "issue_id": "UX-011",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global"
+      ],
+      "issue_title": "Low text contrast",
+      "user_problem": "Low-vision users struggle to read",
+      "dot_criterion": "Accessibility",
+      "nielsen_heuristic": [
+        "Accessibility"
+      ],
+      "severity": "Major",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "text over background has low contrast",
+        "CTA text blends with background"
+      ],
+      "recommendation": "Ensure WCAG AA contrast",
+      "acceptance_criteria": [
+        "Text meets WCAG AA contrast"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.64
+    },
+    {
+      "issue_id": "UX-012",
+      "domain": "ecommerce",
+      "page_type": [
+        "Checkout"
+      ],
+      "issue_title": "Unclear error messages",
+      "user_problem": "Users don’t know how to recover",
+      "dot_criterion": "Error handling",
+      "nielsen_heuristic": [
+        "Help users recover"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "errors shown only after submit",
+        "error messages generic"
+      ],
+      "recommendation": "Add human-readable errors with guidance",
+      "acceptance_criteria": [
+        "Errors explain cause and recovery"
+      ],
+      "requires_checkout": true,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77
+    },
+    {
+      "issue_id": "UX-013",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global"
+      ],
+      "issue_title": "Lack of personalization",
+      "user_problem": "Users receive generic content despite sharing preferences",
+      "dot_criterion": "Personalisation",
+      "nielsen_heuristic": [
+        "Match system to real world"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "logged-in and logged-out look same",
+        "no recommended/recently viewed sections"
+      ],
+      "recommendation": "Use user preferences to personalize content and journeys",
+      "acceptance_criteria": [
+        "Personalized content appears based on user interests"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.63
+    },
+    {
+      "issue_id": "UX-014",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global"
+      ],
+      "issue_title": "No anticipatory guidance",
+      "user_problem": "App does not proactively help users during journeys",
+      "dot_criterion": "Guidance & feedback",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "issue observed on Global via screenshot/DOM inspection"
+      ],
+      "recommendation": "Add reminders, notifications, contextual tips",
+      "acceptance_criteria": [
+        "Users receive timely guidance without manual search"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.63
+    },
+    {
+      "issue_id": "UX-015",
+      "domain": "ecommerce",
+      "page_type": [
+        "Search"
+      ],
+      "issue_title": "Missing global search",
+      "user_problem": "Users struggle to find content quickly",
+      "dot_criterion": "Findability",
+      "nielsen_heuristic": [
+        "Recognition rather than recall"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "no search input/icon in header",
+        "search unavailable on key pages"
+      ],
+      "recommendation": "Add persistent global search",
+      "acceptance_criteria": [
+        "Search available from all main screens"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.64
+    },
+    {
+      "issue_id": "UX-016",
+      "domain": "ecommerce",
+      "page_type": [
+        "Forms"
+      ],
+      "issue_title": "Unclear error recovery",
+      "user_problem": "Users cannot understand how to fix form errors",
+      "dot_criterion": "Error handling",
+      "nielsen_heuristic": [
+        "Help users recover"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "errors shown only after submit",
+        "error messages generic"
+      ],
+      "recommendation": "Show inline error explanations and recovery steps",
+      "acceptance_criteria": [
+        "Errors clearly explain cause and fix"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77
+    },
+    {
+      "issue_id": "UX-017",
+      "domain": "ecommerce",
+      "page_type": [
+        "Navigation"
+      ],
+      "issue_title": "Non-sticky headers",
+      "user_problem": "Users lose context when scrolling",
+      "dot_criterion": "Navigation",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "issue observed on Navigation via screenshot/DOM inspection"
+      ],
+      "recommendation": "Make headers sticky on scroll",
+      "acceptance_criteria": [
+        "Header remains visible on scroll"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.52
+    },
+    {
+      "issue_id": "UX-018",
+      "domain": "ecommerce",
+      "page_type": [
+        "Accessibility"
+      ],
+      "issue_title": "Low color contrast",
+      "user_problem": "Visually impaired users struggle to read",
+      "dot_criterion": "Accessibility",
+      "nielsen_heuristic": [
+        "Accessibility"
+      ],
+      "severity": "Major",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "text over background has low contrast",
+        "CTA text blends with background"
+      ],
+      "recommendation": "Ensure WCAG AA contrast",
+      "acceptance_criteria": [
+        "Contrast passes WCAG AA checks"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77
+    },
+    {
+      "issue_id": "UX-019",
+      "domain": "ecommerce",
+      "page_type": [
+        "Checkout"
+      ],
+      "issue_title": "Limited payment options",
+      "user_problem": "Users abandon due to missing local payments",
+      "dot_criterion": "Payments",
+      "nielsen_heuristic": [
+        "Flexibility & efficiency"
+      ],
+      "severity": "Major",
+      "evidence_type": "Analytics",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "issue observed on Checkout via screenshot/DOM inspection"
+      ],
+      "recommendation": "Add wallets and local methods",
+      "acceptance_criteria": [
+        "Multiple relevant payment options available"
+      ],
+      "requires_checkout": true,
+      "requires_cart": false,
+      "visual_confirmation_required": false,
+      "confidence_weight": 0.77
+    },
+    {
+      "issue_id": "UX-020",
+      "domain": "ecommerce",
+      "page_type": [
+        "Mobile"
+      ],
+      "issue_title": "Small touch targets",
+      "user_problem": "Users mis-tap controls",
+      "dot_criterion": "Touch targets",
+      "nielsen_heuristic": [
+        "Error prevention"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "buttons smaller than ~44px",
+        "controls too close causing mis-taps"
+      ],
+      "recommendation": "Increase touch target to 44px",
+      "acceptance_criteria": [
+        "All tappable elements meet size guidelines"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.52
+    },
+    {
+      "issue_id": "UX-021",
+      "domain": "ecommerce",
+      "page_type": [
+        "Homepage"
+      ],
+      "issue_title": "Weak value proposition above the fold",
+      "user_problem": "Users cannot quickly understand what the site offers",
+      "dot_criterion": "Clarity",
+      "nielsen_heuristic": [
+        "Match system to real world"
+      ],
+      "severity": "Major",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "issue observed on Homepage via screenshot/DOM inspection"
+      ],
+      "recommendation": "Clarify value proposition with concise headline and subtext",
+      "acceptance_criteria": [
+        "Primary value proposition visible without scrolling"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77
+    },
+    {
+      "issue_id": "UX-022",
+      "domain": "ecommerce",
+      "page_type": [
+        "Homepage"
+      ],
+      "issue_title": "Hero visuals distract from task",
+      "user_problem": "Large visuals delay task completion",
+      "dot_criterion": "Focus",
+      "nielsen_heuristic": [
+        "Aesthetic & minimalist design"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "issue observed on Homepage via screenshot/DOM inspection"
+      ],
+      "recommendation": "Reduce hero size or add clear task CTA",
+      "acceptance_criteria": [
+        "Users can identify primary task immediately"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.52
+    },
+    {
+      "issue_id": "UX-023",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global"
+      ],
+      "issue_title": "Inconsistent icon usage",
+      "user_problem": "Icons mean different things across pages",
+      "dot_criterion": "Consistency",
+      "nielsen_heuristic": [
+        "Consistency & standards"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "issue observed on Global via screenshot/DOM inspection"
+      ],
+      "recommendation": "Standardize icon usage and meaning",
+      "acceptance_criteria": [
+        "Icons behave consistently site-wide"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.63
+    },
+    {
+      "issue_id": "UX-024",
+      "domain": "ecommerce",
+      "page_type": [
+        "Navigation"
+      ],
+      "issue_title": "Overloaded main navigation",
+      "user_problem": "Too many menu items overwhelm users",
+      "dot_criterion": "Navigation",
+      "nielsen_heuristic": [
+        "Recognition rather than recall"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "too many top-level menu items",
+        "menu requires scrolling for common sections"
+      ],
+      "recommendation": "Group navigation items and reduce top-level options",
+      "acceptance_criteria": [
+        "Navigation limited to manageable categories"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77
+    },
+    {
+      "issue_id": "UX-025",
+      "domain": "ecommerce",
+      "page_type": [
+        "Navigation"
+      ],
+      "issue_title": "No clear active state",
+      "user_problem": "Users don’t know where they are",
+      "dot_criterion": "Orientation",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "no selected state highlight",
+        "breadcrumbs missing/unclear"
+      ],
+      "recommendation": "Add clear active state styling",
+      "acceptance_criteria": [
+        "Active page clearly highlighted"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.52
+    },
+    {
+      "issue_id": "UX-026",
+      "domain": "ecommerce",
+      "page_type": [
+        "Search"
+      ],
+      "issue_title": "Search results lack relevance cues",
+      "user_problem": "Users cannot judge result usefulness",
+      "dot_criterion": "Findability",
+      "nielsen_heuristic": [
+        "Recognition rather than recall"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "results not sorted by relevance",
+        "no category/brand cues in results"
+      ],
+      "recommendation": "Add thumbnails, categories, or highlights",
+      "acceptance_criteria": [
+        "Results clearly differentiated"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.63
+    },
+    {
+      "issue_id": "UX-027",
+      "domain": "ecommerce",
+      "page_type": [
+        "PLP"
+      ],
+      "issue_title": "Missing sorting options",
+      "user_problem": "Users can’t control product order",
+      "dot_criterion": "Control",
+      "nielsen_heuristic": [
+        "User control & freedom"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "issue observed on PLP via screenshot/DOM inspection"
+      ],
+      "recommendation": "Add sorting by price, popularity, relevance",
+      "acceptance_criteria": [
+        "Users can easily reorder results"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.52
+    },
+    {
+      "issue_id": "UX-028",
+      "domain": "ecommerce",
+      "page_type": [
+        "PLP"
+      ],
+      "issue_title": "Filters reset unexpectedly",
+      "user_problem": "Users lose applied filters",
+      "dot_criterion": "Predictability",
+      "nielsen_heuristic": [
+        "Consistency & standards"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "filters cleared after navigation",
+        "filters lost on refresh/pagination"
+      ],
+      "recommendation": "Persist filters across navigation",
+      "acceptance_criteria": [
+        "Filters remain applied until cleared"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77
+    },
+    {
+      "issue_id": "UX-029",
+      "domain": "ecommerce",
+      "page_type": [
+        "PLP"
+      ],
+      "issue_title": "Filter labels unclear",
+      "user_problem": "Users don’t understand filter meaning",
+      "dot_criterion": "Clarity",
+      "nielsen_heuristic": [
+        "Match system to real world"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "filter labels are jargon",
+        "filter meaning ambiguous"
+      ],
+      "recommendation": "Use plain-language filter labels",
+      "acceptance_criteria": [
+        "Filters are self-explanatory"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.52
+    },
+    {
+      "issue_id": "UX-030",
+      "domain": "ecommerce",
+      "page_type": [
+        "PDP"
+      ],
+      "issue_title": "Product images lack zoom/detail",
+      "user_problem": "Users can’t inspect product properly",
+      "dot_criterion": "Confidence",
+      "nielsen_heuristic": [
+        "Help users recognize"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "only 1-2 images available",
+        "no zoom or multiple angles"
+      ],
+      "recommendation": "Add zoom and multiple image views",
+      "acceptance_criteria": [
+        "Users can clearly inspect product"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.63
+    },
+    {
+      "issue_id": "UX-031",
+      "domain": "ecommerce",
+      "page_type": [
+        "PDP"
+      ],
+      "issue_title": "Reviews hard to find",
+      "user_problem": "Users don’t see social proof",
+      "dot_criterion": "Trust",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "ratings not shown near title",
+        "reviews section far below fold"
+      ],
+      "recommendation": "Surface ratings near product title",
+      "acceptance_criteria": [
+        "Reviews visible early on PDP"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77
+    },
+    {
+      "issue_id": "UX-032",
+      "domain": "ecommerce",
+      "page_type": [
+        "PDP"
+      ],
+      "issue_title": "Stock availability unclear",
+      "user_problem": "Users unsure if item is available",
+      "dot_criterion": "Status visibility",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "no in-stock/out-of-stock label",
+        "availability shown only late"
+      ],
+      "recommendation": "Clearly indicate stock status",
+      "acceptance_criteria": [
+        "Availability shown before add-to-cart"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.64
+    },
+    {
+      "issue_id": "UX-033",
+      "domain": "ecommerce",
+      "page_type": [
+        "PDP"
+      ],
+      "issue_title": "Pricing lacks breakdown",
+      "user_problem": "Users surprised by final cost",
+      "dot_criterion": "Transparency",
+      "nielsen_heuristic": [
+        "Help users recover"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "fees/shipping not shown early",
+        "final total differs from earlier price"
+      ],
+      "recommendation": "Show taxes, fees, shipping early",
+      "acceptance_criteria": [
+        "Total cost expectations set early"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77
+    },
+    {
+      "issue_id": "UX-034",
+      "domain": "ecommerce",
+      "page_type": [
+        "Cart"
+      ],
+      "issue_title": "Editable cart items unclear",
+      "user_problem": "Users don’t know how to update cart",
+      "dot_criterion": "Control",
+      "nielsen_heuristic": [
+        "User control & freedom"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "issue observed on Cart via screenshot/DOM inspection"
+      ],
+      "recommendation": "Make edit/remove actions visible",
+      "acceptance_criteria": [
+        "Users can easily edit cart"
+      ],
+      "requires_checkout": false,
+      "requires_cart": true,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.52
+    },
+    {
+      "issue_id": "UX-035",
+      "domain": "ecommerce",
+      "page_type": [
+        "Cart"
+      ],
+      "issue_title": "Shipping costs revealed late",
+      "user_problem": "Users abandon due to surprises",
+      "dot_criterion": "Transparency",
+      "nielsen_heuristic": [
+        "Error prevention"
+      ],
+      "severity": "Major",
+      "evidence_type": "Analytics",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "fees/shipping not shown early",
+        "final total differs from earlier price"
+      ],
+      "recommendation": "Estimate shipping in cart",
+      "acceptance_criteria": [
+        "Shipping costs visible before checkout"
+      ],
+      "requires_checkout": false,
+      "requires_cart": true,
+      "visual_confirmation_required": false,
+      "confidence_weight": 0.77
+    },
+    {
+      "issue_id": "UX-036",
+      "domain": "ecommerce",
+      "page_type": [
+        "Checkout"
+      ],
+      "issue_title": "Guest checkout not available",
+      "user_problem": "Users forced to create accounts",
+      "dot_criterion": "Flexibility",
+      "nielsen_heuristic": [
+        "Flexibility & efficiency"
+      ],
+      "severity": "Major",
+      "evidence_type": "Analytics",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "login required before checkout",
+        "no guest option present"
+      ],
+      "recommendation": "Enable guest checkout option",
+      "acceptance_criteria": [
+        "Guest checkout clearly offered"
+      ],
+      "requires_checkout": true,
+      "requires_cart": false,
+      "visual_confirmation_required": false,
+      "confidence_weight": 0.77
+    },
+    {
+      "issue_id": "UX-037",
+      "domain": "ecommerce",
+      "page_type": [
+        "Checkout"
+      ],
+      "issue_title": "Form fields not grouped logically",
+      "user_problem": "Users struggle to complete checkout",
+      "dot_criterion": "Structure",
+      "nielsen_heuristic": [
+        "Aesthetic & minimalist design"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "issue observed on Checkout via screenshot/DOM inspection"
+      ],
+      "recommendation": "Group fields by logical sections",
+      "acceptance_criteria": [
+        "Forms visually segmented"
+      ],
+      "requires_checkout": true,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.52
+    },
+    {
+      "issue_id": "UX-038",
+      "domain": "ecommerce",
+      "page_type": [
+        "Checkout"
+      ],
+      "issue_title": "No inline validation",
+      "user_problem": "Users discover errors too late",
+      "dot_criterion": "Error prevention",
+      "nielsen_heuristic": [
+        "Error prevention"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "errors shown only after submit",
+        "error messages generic"
+      ],
+      "recommendation": "Add real-time inline validation",
+      "acceptance_criteria": [
+        "Errors shown as user types"
+      ],
+      "requires_checkout": true,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77
+    },
+    {
+      "issue_id": "UX-039",
+      "domain": "ecommerce",
+      "page_type": [
+        "Checkout"
+      ],
+      "issue_title": "Primary CTA below the fold",
+      "user_problem": "Users miss next action",
+      "dot_criterion": "Visibility",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "multiple primary buttons with same style",
+        "primary action not visually dominant",
+        "primary CTA requires scrolling",
+        "no sticky CTA"
+      ],
+      "recommendation": "Ensure primary CTA visible without scrolling",
+      "acceptance_criteria": [
+        "CTA always visible"
+      ],
+      "requires_checkout": true,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77
+    },
+    {
+      "issue_id": "UX-040",
+      "domain": "ecommerce",
+      "page_type": [
+        "Checkout"
+      ],
+      "issue_title": "Security reassurance missing",
+      "user_problem": "Users doubt payment safety",
+      "dot_criterion": "Trust",
+      "nielsen_heuristic": [
+        "Help users recover"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "issue observed on Checkout via screenshot/DOM inspection"
+      ],
+      "recommendation": "Add security badges and copy",
+      "acceptance_criteria": [
+        "Security reassurance visible"
+      ],
+      "requires_checkout": true,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77
+    },
+    {
+      "issue_id": "UX-041",
+      "domain": "ecommerce",
+      "page_type": [
+        "Account"
+      ],
+      "issue_title": "Password rules unclear",
+      "user_problem": "Users fail password creation",
+      "dot_criterion": "Error prevention",
+      "nielsen_heuristic": [
+        "Error prevention"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "issue observed on Account via screenshot/DOM inspection"
+      ],
+      "recommendation": "Display password requirements upfront",
+      "acceptance_criteria": [
+        "Password rules clear before entry"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.52
+    },
+    {
+      "issue_id": "UX-042",
+      "domain": "ecommerce",
+      "page_type": [
+        "Account"
+      ],
+      "issue_title": "Password reset flow confusing",
+      "user_problem": "Users abandon recovery",
+      "dot_criterion": "Recovery",
+      "nielsen_heuristic": [
+        "Help users recover"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "issue observed on Account via screenshot/DOM inspection"
+      ],
+      "recommendation": "Simplify password reset steps",
+      "acceptance_criteria": [
+        "Reset process clear and short"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77
+    },
+    {
+      "issue_id": "UX-043",
+      "domain": "ecommerce",
+      "page_type": [
+        "Mobile"
+      ],
+      "issue_title": "Horizontal scrolling issues",
+      "user_problem": "Content overflows screen",
+      "dot_criterion": "Responsiveness",
+      "nielsen_heuristic": [
+        "Flexibility & efficiency"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "issue observed on Mobile via screenshot/DOM inspection"
+      ],
+      "recommendation": "Fix responsive breakpoints",
+      "acceptance_criteria": [
+        "No horizontal scroll on mobile"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.64
+    },
+    {
+      "issue_id": "UX-044",
+      "domain": "ecommerce",
+      "page_type": [
+        "Mobile"
+      ],
+      "issue_title": "Critical CTAs too small",
+      "user_problem": "Users mis-tap actions",
+      "dot_criterion": "Touch ergonomics",
+      "nielsen_heuristic": [
+        "Error prevention"
+      ],
+      "severity": "Major",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "multiple primary buttons with same style",
+        "primary action not visually dominant",
+        "buttons smaller than ~44px",
+        "controls too close causing mis-taps"
+      ],
+      "recommendation": "Increase CTA size and spacing",
+      "acceptance_criteria": [
+        "CTAs meet touch target guidelines"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77
+    },
+    {
+      "issue_id": "UX-045",
+      "domain": "ecommerce",
+      "page_type": [
+        "Performance"
+      ],
+      "issue_title": "Slow perceived load",
+      "user_problem": "Users think site is broken",
+      "dot_criterion": "Feedback",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "no spinner/skeleton during load",
+        "user sees blank state"
+      ],
+      "recommendation": "Add skeleton loaders or progress indicators",
+      "acceptance_criteria": [
+        "Loading feedback visible"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77
+    },
+    {
+      "issue_id": "UX-046",
+      "domain": "ecommerce",
+      "page_type": [
+        "Performance"
+      ],
+      "issue_title": "No loading indicators",
+      "user_problem": "Users unsure system is responding",
+      "dot_criterion": "Feedback",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "no spinner/skeleton during load",
+        "user sees blank state"
+      ],
+      "recommendation": "Show spinners or loaders",
+      "acceptance_criteria": [
+        "Users see system is working"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.52
+    },
+    {
+      "issue_id": "UX-047",
+      "domain": "ecommerce",
+      "page_type": [
+        "Accessibility"
+      ],
+      "issue_title": "Missing focus states",
+      "user_problem": "Keyboard users lose context",
+      "dot_criterion": "Accessibility",
+      "nielsen_heuristic": [
+        "Accessibility"
+      ],
+      "severity": "Major",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "tab navigation lacks visible focus outline",
+        "keyboard focus unclear"
+      ],
+      "recommendation": "Add visible focus indicators",
+      "acceptance_criteria": [
+        "Focus clearly visible"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77
+    },
+    {
+      "issue_id": "UX-048",
+      "domain": "ecommerce",
+      "page_type": [
+        "Accessibility"
+      ],
+      "issue_title": "Images missing alt text",
+      "user_problem": "Screen reader users miss context",
+      "dot_criterion": "Accessibility",
+      "nielsen_heuristic": [
+        "Accessibility"
+      ],
+      "severity": "Major",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "images have empty or missing alt attributes",
+        "screen reader lacks image context"
+      ],
+      "recommendation": "Provide meaningful alt text",
+      "acceptance_criteria": [
+        "All images have alt text"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77
+    },
+    {
+      "issue_id": "UX-049",
+      "domain": "ecommerce",
+      "page_type": [
+        "Content"
+      ],
+      "issue_title": "Jargon-heavy copy",
+      "user_problem": "Users don’t understand terminology",
+      "dot_criterion": "Clarity",
+      "nielsen_heuristic": [
+        "Match system to real world"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "copy uses internal terms",
+        "labels not matching user language"
+      ],
+      "recommendation": "Replace jargon with plain language",
+      "acceptance_criteria": [
+        "Copy is easy to understand"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.52
+    },
+    {
+      "issue_id": "UX-050",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global"
+      ],
+      "issue_title": "Inconsistent terminology",
+      "user_problem": "Same concept named differently",
+      "dot_criterion": "Consistency",
+      "nielsen_heuristic": [
+        "Consistency & standards"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "same concept named differently",
+        "labels inconsistent across pages"
+      ],
+      "recommendation": "Standardize terminology across site",
+      "acceptance_criteria": [
+        "Terminology consistent"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.63
+    }
+  ]
+}
