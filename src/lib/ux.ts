@@ -18,6 +18,13 @@ export type Issue = {
 
 export type RetrievedIssue = Issue;
 
+/** Result from image-led detection pass: issue confirmed visually in a screenshot. */
+export type ImageDetectedResult = {
+  issue_id: string;
+  evidence_summary: string;
+  screenshot_index: number;
+};
+
 /** Default library file (under src/data). Replace this or set UX_ISSUE_LIBRARY env to use another file. */
 const DEFAULT_LIBRARY_FILE = "ux_issue_library_ecommerce_v3.5_REFINED.json";
 
@@ -188,12 +195,45 @@ function evidenceScore(
 }
 
 /**
- * Retrieves issues using keyword matching, then filters by evidence from crawl excerpts.
- * This prevents false positives by only including issues whose signals are actually present.
- * 
- * With improved signal definitions and multi-pattern detection:
- * - Only ~50% of signals need to match to capture the issue (handles variations)
- * - But we require higher evidence confidence now that signals are more specific
+ * Infer likely page types from crawl excerpts, screenshot filenames, and goal text.
+ * Screenshot filenames are useful here because they often encode page context
+ * (e.g. "checkout_desktop.png", "pdp_mobile.png").
+ */
+function inferPageTypes(
+  crawlExcerpts: string | undefined,
+  screenshotFilenames: string,
+  goal: string,
+): string[] {
+  const haystack = `${crawlExcerpts ?? ""} ${screenshotFilenames ?? ""} ${goal ?? ""}`.toLowerCase();
+  const matched = new Set<string>();
+
+  const test = (keywords: string[], pageType: string) => {
+    if (keywords.some((kw) => haystack.includes(kw))) {
+      matched.add(pageType);
+    }
+  };
+
+  test(["checkout", "payment"], "Checkout");
+  test(["cart", "bag"], "Cart");
+  test(["product", "pdp"], "PDP");
+  test(["homepage", "home"], "Homepage");
+  test(["account", "login", "register"], "Account");
+  test(["search"], "Search");
+  test(["orders", "confirmation"], "Orders");
+  test(["forms", "form"], "Forms");
+  test(["navigation", "nav", "menu"], "Navigation");
+  test(["mobile"], "Mobile");
+
+  return Array.from(matched);
+}
+
+/**
+ * Retrieves issues using keyword matching (presence track) and page-type inference (absence track),
+ * then filters by evidence from crawl excerpts.
+ *
+ * Presence-track behaviour (detection_type === "presence") keeps existing keyword scoring logic.
+ * Absence-track behaviour (detection_type === "absence") bypasses keywordScore() and uses
+ * inferred page types plus confidence weight to seed the candidate pool.
  */
 export function simpleRetrieveIssues(
   issueLibrary: Issue[],
@@ -203,16 +243,23 @@ export function simpleRetrieveIssues(
   crawlExcerpts?: string,
   screenshotText = "",
   hasScreenshots = false,
+  imageDetected?: ImageDetectedResult[],
 ): RetrievedIssue[] {
-  // Step 1: Keyword-based scoring (broadened query for better recall)
-  const keywordScored = issueLibrary
+  const detectionType = (issue: Issue): string =>
+    typeof (issue as any).detection_type === "string" ? String((issue as any).detection_type) : "presence";
+
+  const presenceIssues = issueLibrary.filter((issue) => detectionType(issue) !== "absence");
+  const absenceIssues = issueLibrary.filter((issue) => detectionType(issue) === "absence");
+
+  // Step 1 (presence track): Keyword-based scoring (broadened query for better recall)
+  const keywordScored = presenceIssues
     .map((issue) => ({
       issue,
       keywordScore: keywordScore(issue, url, goal, crawlExcerpts, screenshotText),
     }))
     .sort((a, b) => b.keywordScore - a.keywordScore);
 
-  // Fallback: if keyword matching is weak, include high-confidence library items
+  // Fallback (presence track): if keyword matching is weak, include high-confidence library items
   let candidates = keywordScored
     .filter((entry) => entry.keywordScore > 0)
     .slice(0, topK * 2);
@@ -229,13 +276,68 @@ export function simpleRetrieveIssues(
   }
 
   if (candidates.length === 0) {
-    // Ultimate fallback: return top high-confidence issues by confidence weight
+    // Ultimate fallback (presence track only): return top high-confidence issues by confidence weight
     candidates = keywordScored
       .filter((entry) => {
         const conf = typeof entry.issue.confidence_weight === "number" ? entry.issue.confidence_weight : 0.7;
         return conf >= 0.75;
       })
       .slice(0, topK);
+  }
+
+  // ABSENCE TRACK: seed candidates for detection_type === "absence"
+  if (absenceIssues.length > 0) {
+    const inferredPageTypes = inferPageTypes(crawlExcerpts, screenshotText, goal);
+
+    if (inferredPageTypes.length > 0) {
+      const hasAnyCrawlExcerpt = Boolean(crawlExcerpts && crawlExcerpts.trim().length > 0);
+
+      const absenceCandidates = absenceIssues
+        .filter((issue) => {
+          const pages = Array.isArray(issue.page_type) ? issue.page_type : [];
+          const hasPageMatch = pages.some((p) => inferredPageTypes.includes(p));
+          if (!hasPageMatch) return false;
+
+          // If screenshots exist, rely on them even when crawl is blocked.
+          if (hasScreenshots) return true;
+
+          // Without screenshots, only consider absence issues when some crawl excerpt exists.
+          return hasAnyCrawlExcerpt;
+        })
+        .map((issue) => {
+          const conf = typeof issue.confidence_weight === "number" ? issue.confidence_weight : 0.7;
+          return {
+            issue,
+            keywordScore: conf, // use confidence_weight directly as the score for absence-track
+            source: "absence-track" as const,
+          };
+        });
+
+      if (absenceCandidates.length > 0) {
+        candidates = [...candidates, ...absenceCandidates];
+      }
+    }
+  }
+
+  // Image-detection pass: force-include issues confirmed by direct visual inspection
+  type CandidateEntry = { issue: Issue; keywordScore: number; source?: "absence-track" | "image-detection" };
+  if (imageDetected && imageDetected.length > 0) {
+    const seenIds = new Set((candidates as CandidateEntry[]).map((c) => c.issue.issue_id).filter(Boolean));
+    const byId = new Map<string, Issue>();
+    for (const issue of issueLibrary) {
+      if (issue.issue_id) byId.set(issue.issue_id, issue);
+    }
+    const imageEntries: CandidateEntry[] = [];
+    for (const item of imageDetected) {
+      if (seenIds.has(item.issue_id)) continue;
+      const issue = byId.get(item.issue_id);
+      if (!issue) continue;
+      seenIds.add(item.issue_id);
+      imageEntries.push({ issue, keywordScore: 0.95, source: "image-detection" });
+    }
+    candidates = [...(candidates as CandidateEntry[]), ...imageEntries];
+    // So that image-detected (0.95) rank first when no crawl path uses candidates.slice(0, topK)
+    candidates.sort((a, b) => b.keywordScore - a.keywordScore);
   }
 
   // Step 2: Evidence-based filtering (if crawl excerpts available)
@@ -245,9 +347,10 @@ export function simpleRetrieveIssues(
     const combinedEvidence = crawlLower + " " + screenshotLower;
 
     const evidenceScored = candidates.map((entry) => {
+      const isImageDetected = (entry as any).source === "image-detection";
       const crawlEv = evidenceScore(entry.issue, crawlExcerpts);
       const screenshotEv = evidenceScore(entry.issue, screenshotText);
-      const bestEv = Math.max(crawlEv, screenshotEv);
+      const bestEv = isImageDetected ? 0.95 : Math.max(crawlEv, screenshotEv);
 
       return {
         ...entry,
@@ -347,6 +450,161 @@ export function simpleRetrieveIssues(
   return unique;
 }
 
+/**
+ * Build a compact library summary for the image-detection LLM call.
+ * Each issue: issue_id, issue_title, detection_type, page_type, detection_hint (first signal, max 15 words).
+ */
+function buildCompactLibrarySummary(issueLibrary: Issue[]): Array<{ issue_id: string; issue_title: string; detection_type: string; page_type: string[]; detection_hint: string }> {
+  return issueLibrary.map((issue) => {
+    const signals: string[] = Array.isArray(issue.signals_to_detect) ? issue.signals_to_detect : [];
+    const firstSignal = signals[0] ?? "";
+    const hintWords = firstSignal.split(/\s+/).slice(0, 15).join(" ");
+    const detectionType = typeof (issue as any).detection_type === "string" ? String((issue as any).detection_type) : "presence";
+    const pageType = Array.isArray(issue.page_type) ? issue.page_type : [];
+    return {
+      issue_id: issue.issue_id ?? "",
+      issue_title: issue.issue_title ?? "",
+      detection_type: detectionType,
+      page_type: pageType,
+      detection_hint: hintWords,
+    };
+  });
+}
+
+/**
+ * Image-led detection pass: run BEFORE retrieval when screenshots are present.
+ * Sends screenshots + compact library to LLM; returns issue IDs with clear visual evidence.
+ * On parse failure or error, returns [] and logs — does not throw. Pipeline continues unchanged.
+ */
+export async function imageDetectionPass(
+  screenshotDataUrls: string[],
+  issueLibrary: Issue[],
+  apiKey: string,
+  useClaude: boolean,
+): Promise<ImageDetectedResult[]> {
+  if (screenshotDataUrls.length === 0 || issueLibrary.length === 0) {
+    return [];
+  }
+
+  const compactLib = buildCompactLibrarySummary(issueLibrary);
+  const instruction = `You are a UX analyst. Review the provided screenshots carefully.
+For each issue in the library below, determine if there is clear visual evidence in any screenshot that this issue is present (for presence issues) or that the element is missing (for absence issues). Only include issues where you have clear visual confidence.
+
+CONFIDENCE DEFINITIONS (STRICT):
+- "high" = you can clearly see the issue or missing element directly in the screenshot with no ambiguity.
+- "medium" = you can see a strong indirect signal — for example, a form field implying missing validation, or a sort dropdown with a placeholder default. Do NOT use medium for issues inferred from general page structure, brand conventions, or anything not visible in the screenshot area.
+
+CRITICAL FILTERING RULES:
+1. If the evidence is not clearly visible in the screenshot, omit the issue entirely. When in doubt, omit.
+2. Before returning an issue, ask yourself: Can I point to a specific pixel area in the screenshot that shows this problem? If not, omit it.
+3. Do not flag issues where the element exists but is suboptimal. Only flag where the element is clearly broken or completely absent.
+
+Return ONLY a JSON array. No explanation. No markdown. Format:
+[
+  {
+    "issue_id": "string",
+    "screenshot_index": number,
+    "confidence": "high" | "medium",
+    "evidence_summary": "string (max 20 words)"
+  }
+]
+
+Only return issues where confidence is medium or high.
+Do not return every issue — only ones with real visual evidence.`;
+
+  const prompt = `${instruction}\n\nLibrary (compact):\n${JSON.stringify(compactLib, null, 2)}`;
+
+  try {
+    let responseText: string;
+    if (useClaude) {
+      const claudeResp = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "claude-3-haiku-20240307",
+          max_tokens: 4000,
+          messages: [{
+            role: "user",
+            content: [
+              { type: "text", text: prompt },
+              ...screenshotDataUrls.slice(0, 10).map((url) => ({
+                type: "image" as const,
+                source: {
+                  type: "base64" as const,
+                  media_type: (url.match(/data:(.*?);/) || [])[1] as string || "image/jpeg",
+                  data: url.split(",")[1],
+                },
+              })),
+            ],
+          }],
+        }),
+      });
+      const data = await claudeResp.json() as { content?: Array<{ type: string; text?: string }>; error?: { message?: string } };
+      if (!claudeResp.ok) {
+        console.error("[imageDetectionPass] Claude API error:", data.error?.message ?? claudeResp.status);
+        return [];
+      }
+      responseText = data.content?.find((c) => c.type === "text")?.text ?? "[]";
+    } else {
+      const openRouterResp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "openrouter/auto",
+          max_tokens: 4000,
+          messages: [{
+            role: "user",
+            content: [
+              { type: "text", text: prompt },
+              ...screenshotDataUrls.slice(0, 10).map((url) => ({
+                type: "image_url",
+                image_url: { url },
+              })),
+            ],
+          }],
+        }),
+      });
+      const data = await openRouterResp.json() as { choices?: Array<{ message?: { content?: string } }>; error?: { message?: string } };
+      if (!openRouterResp.ok || data.error) {
+        console.error("[imageDetectionPass] OpenRouter API error:", data.error?.message ?? openRouterResp.status);
+        return [];
+      }
+      responseText = data.choices?.[0]?.message?.content ?? "[]";
+    }
+
+    const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) {
+      console.error("[imageDetectionPass] No JSON array in response");
+      return [];
+    }
+    const parsed = JSON.parse(jsonMatch[0]) as Array<{ issue_id?: string; screenshot_index?: number; confidence?: string; evidence_summary?: string }>;
+    if (!Array.isArray(parsed)) {
+      console.error("[imageDetectionPass] Parsed value is not an array");
+      return [];
+    }
+    const results: ImageDetectedResult[] = [];
+    for (const item of parsed) {
+      const conf = (item.confidence ?? "").toLowerCase();
+      if (conf !== "high" && conf !== "medium") continue;
+      const id = typeof item.issue_id === "string" ? item.issue_id.trim() : "";
+      if (!id) continue;
+      const idx = typeof item.screenshot_index === "number" ? item.screenshot_index : 0;
+      const summary = typeof item.evidence_summary === "string" ? item.evidence_summary.trim().slice(0, 200) : "";
+      results.push({ issue_id: id, evidence_summary: summary, screenshot_index: idx });
+    }
+    return results;
+  } catch (e) {
+    console.error("[imageDetectionPass] Failed:", e);
+    return [];
+  }
+}
 
 export type IssueValidation = {
   issue_id: string;
@@ -506,6 +764,7 @@ export async function validateIssuesWithLLM(
   apiKey: string,
   useClaude: boolean,
   screenshotImages?: string[],
+  imageDetected?: ImageDetectedResult[],
 ): Promise<{ validated: RetrievedIssue[]; suppressed: Array<{ issue: RetrievedIssue; reason: string }> }> {
   if (issues.length === 0) {
     return { validated: [], suppressed: [] };
@@ -515,6 +774,15 @@ export async function validateIssuesWithLLM(
   const hasCrawl = crawlExcerpts && crawlExcerpts.trim().length > 0;
   const hasScreenshots = screenshotText && screenshotText.trim().length > 0;
 
+  let imageDetectedBlock = "";
+  if (imageDetected && imageDetected.length > 0) {
+    imageDetectedBlock = `
+
+Image-detection pass results (treat as strong positive evidence — only suppress if you see an explicit counter-signal):
+${imageDetected.map((r) => `- ${r.issue_id}: This issue was confirmed by direct visual inspection of screenshot [${r.screenshot_index}]. Evidence: ${r.evidence_summary}. Treat this as strong positive evidence. Only suppress if you see an explicit counter-signal.`).join("\n")}
+`;
+  }
+
   const validationPrompt = `You are validating UX issues against evidence. Evaluate SCREENSHOTS and CRAWL as INDEPENDENT sources. An issue should be included if EITHER source provides evidence.
 
 URL: ${url}
@@ -523,6 +791,7 @@ Goal: ${goal}
 Evidence sources (evaluate separately):
 ${hasScreenshots ? `SCREENSHOTS (primary evidence - evaluate independently):\n${screenshotText}\n` : "SCREENSHOTS: None provided\n"}
 ${hasCrawl ? `CRAWL EXCERPTS (secondary evidence - evaluate independently):\n${crawlExcerpts}\n` : "CRAWL EXCERPTS: None available (may be blocked)\n"}
+${imageDetectedBlock}
 
 Issues to validate:
 ${JSON.stringify(issues.map((i) => ({
@@ -746,12 +1015,23 @@ Return ONLY a JSON array of these objects, one per issue. No other text.`;
     let validated: RetrievedIssue[] = [];
     const suppressed: Array<{ issue: RetrievedIssue; reason: string }> = [];
 
+    // BUG FIX 3: Build imageConfirmed set for issues detected by visual inspection
+    const imageConfirmedIds = new Set<string>();
+    if (imageDetected && imageDetected.length > 0) {
+      for (const item of imageDetected) {
+        imageConfirmedIds.add(item.issue_id);
+      }
+      console.log(`[Validation] BUG FIX 3: Marking ${imageConfirmedIds.size} issues as imageConfirmed: ${Array.from(imageConfirmedIds).join(", ")}`);
+    }
+
     // Track which evidence sources were available
     const hadScreenshots = screenshotText && screenshotText.trim().length > 0;
     const hadCrawl = crawlExcerpts && crawlExcerpts.trim().length > 0;
 
     for (let i = 0; i < issues.length; i++) {
       const issue = issues[i];
+      const isImageConfirmed = issue.issue_id ? imageConfirmedIds.has(issue.issue_id) : false;
+      
       // Try to match by issue_id first (more reliable), fall back to index
       const validation = validations.find((v) => v.issue_id === issue.issue_id) ?? validations[i];
       if (!validation) {
@@ -759,7 +1039,7 @@ Return ONLY a JSON array of these objects, one per issue. No other text.`;
         continue;
       }
 
-      // ── FIX 3: Page-type stage mismatch – suppress before anything else ──────
+      // BUG FIX 3: Page-type stage mismatch – suppress before anything else ──────
       if ((validation as any).page_type_mismatch === true) {
         suppressed.push({
           issue,
@@ -915,8 +1195,19 @@ Return ONLY a JSON array of these objects, one per issue. No other text.`;
         score += penalties.single_signal_only ?? -0.15;
       }
 
+      // BUG FIX 3 (REVISED): Only override for imageConfirmed if score >= 0.50
+      // Image pass retrieval is guaranteed (Bug 2), but inclusion is score-gated
+      if (isImageConfirmed && score >= 0.50) {
+        console.log(`[Validation] BUG FIX 3: imageConfirmed ${issue.issue_id} qualifies (score ${score.toFixed(2)} >= 0.50), forcing include`);
+        validation.include = true;
+      } else if (isImageConfirmed && score < 0.50) {
+        console.log(`[Validation] BUG FIX 3: imageConfirmed ${issue.issue_id} rejected (score ${score.toFixed(2)} < 0.50), respecting suppression`);
+      }
+
       // Gate: include if score >= 0.55 AND validation says include
+      // BUG FIX 3: imageConfirmed issues bypass score threshold only if already forced include above
       if (validation.include && score >= 0.55) {
+        console.log(`[Validation]${isImageConfirmed ? " [imageConfirmed]" : ""} Including ${issue.issue_id} (score ${score.toFixed(2)})`);
         validated.push(issue);
       } else {
         suppressed.push({

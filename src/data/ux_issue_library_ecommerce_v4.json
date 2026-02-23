@@ -1,0 +1,4543 @@
+{
+  "version": "3.5",
+  "domain": "ecommerce",
+  "issues": [
+    {
+      "issue_id": "UX-001",
+      "domain": "ecommerce",
+      "page_type": [
+        "Homepage"
+      ],
+      "issue_title": "Early intrusive pop-ups",
+      "user_problem": "Users are interrupted before understanding the site",
+      "dot_criterion": "User control & freedom",
+      "nielsen_heuristic": [
+        "User control & freedom"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Modal or overlay element appears on page load (no user interaction required)",
+        "Popup blocks main content with no visible dismiss button or skip option",
+        "Newsletter signup or permission request modal appears immediately on homepage",
+        "Modal or fullscreen layer appears before user can interact with product content"
+      ],
+      "recommendation": "Delay permission pop-ups until user intent is clear",
+      "acceptance_criteria": [
+        "No pop-ups appear before first meaningful interaction"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Pop-ups appear only after user has scrolled 50%+ of page or spent 30+ seconds",
+        "Modals include clear X button or 'No thanks' option in visible corner",
+        "User can click outside modal to dismiss it",
+        "Pop-up appears only on exit intent or after meaningful interaction"
+      ],
+      "context_notes": "Only flag pop-ups that appear within first 5 seconds or before user interacts. Do not flag: Exit-intent modals, scroll-triggered (>50% page), or time-delayed (30s+). Industry context: Legal compliance pop-ups (cookies) may appear immediately; flag intrusive marketing/newsletter pop-ups.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-002",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global"
+      ],
+      "issue_title": "Hidden language selector",
+      "user_problem": "Users struggle to change language/location",
+      "dot_criterion": "Navigation & discoverability",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Language or location selector hidden in footer or buried in menu",
+        "No language/location toggle visible in header or navigation",
+        "Language selector present but not easily identifiable (generic icon or text label)",
+        "Multi-region ecommerce site without visible language switching option"
+      ],
+      "recommendation": "Move language selector to header with clear icon",
+      "acceptance_criteria": [
+        "Language selector visible on all pages in header"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Language/country selector visible in header without scrolling",
+        "Flag icon or language name clearly displayed in top navigation",
+        "Current language/country shown with dropdown arrow indicator",
+        "Selector accessible within one click from any page"
+      ],
+      "context_notes": "Only flag if language selector genuinely hard to find (requires >2 clicks or hidden). Do not flag: Footer placement if clearly visible, or flag/language name in header. Industry context: Single-market sites may not need prominent language selector.",
+      "detection_type": "absence"
+    },
+    {
+      "issue_id": "UX-003",
+      "domain": "ecommerce",
+      "page_type": [
+        "Homepage"
+      ],
+      "issue_title": "CTA overload",
+      "user_problem": "Too many CTAs overwhelm users",
+      "dot_criterion": "Information hierarchy",
+      "nielsen_heuristic": [
+        "Aesthetic & minimalist design"
+      ],
+      "severity": "Major",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Multiple competing CTAs for the SAME user action (e.g., 3+ variations of 'Buy Now' or 'Add to Cart')",
+        "Primary CTA not visually distinguished from secondary CTAs (same size, color, prominence)",
+        "Homepage hero section contains 3+ CTAs with equal visual weight competing for immediate action",
+        "Multiple checkout CTAs visible simultaneously (e.g., 'Checkout', 'Express Checkout', 'Quick Buy' all equally prominent)"
+      ],
+      "recommendation": "Reduce CTAs and establish hierarchy",
+      "acceptance_criteria": [
+        "One primary CTA visually dominant"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "negative_signals": [
+        "Service category buttons with clear color-coding for different features (e.g., 'Used Products' green, 'Rent Now' blue)",
+        "Navigation menu items are text links or minimal buttons, not primary action CTAs",
+        "Primary CTA uses solid color while secondary actions use outlined/ghost button style",
+        "CTAs lead to different features/services, not competing for same conversion action"
+      ],
+      "context_notes": "Do not count: (1) Navigation category links, (2) Service feature buttons with clear differentiation, (3) Secondary utility links. Only flag when multiple CTAs compete for the SAME conversion action.",
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-004",
+      "domain": "ecommerce",
+      "page_type": [
+        "PLP"
+      ],
+      "issue_title": "Inconsistent product cards",
+      "user_problem": "Users struggle to scan products",
+      "dot_criterion": "Consistency",
+      "nielsen_heuristic": [
+        "Consistency & standards"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Product cards vary in layout, height, or content structure across listing",
+        "Add-to-cart button placed inconsistently (bottom for some, hover for others)",
+        "Product price, rating, or image placement differs between cards on same page",
+        "Some cards show additional info (SKU, tags) while others do not"
+      ],
+      "recommendation": "Standardize card layout and CTA placement",
+      "acceptance_criteria": [
+        "All cards follow same layout"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "All product cards show same information in same positions (image top, price bottom, title middle)",
+        "Rating stars appear in same location on all cards that have reviews",
+        "All cards use same image aspect ratio and size",
+        "Badges (sale, new, low stock) appear in consistent corner position"
+      ],
+      "context_notes": "Variation in card content is acceptable if information hierarchy is consistent (e.g., always price at bottom, image at top). Only flag when: Critical info (price, title, image) appears in different locations across cards OR some cards missing essential data. Do not flag: Intentional variations for different product types (digital vs physical) or optional information (ratings only shown when reviews exist).",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-005",
+      "domain": "ecommerce",
+      "page_type": [
+        "PDP"
+      ],
+      "issue_title": "Missing policy info near title",
+      "user_problem": "Users lack trust before purchase",
+      "dot_criterion": "Trust & credibility",
+      "nielsen_heuristic": [
+        "Help users recover"
+      ],
+      "severity": "Major",
+      "evidence_type": "Analytics",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "No delivery timeframe visible anywhere on PDP (not near price, not in product details, not in any section)",
+        "Shipping cost only revealed at checkout, not shown anywhere on PDP",
+        "Return policy link completely absent from PDP (not in footer, not in product info, not anywhere visible)",
+        "No trust indicators (warranties, guarantees) visible anywhere in product area or details"
+      ],
+      "recommendation": "Show shipping/returns near product title",
+      "acceptance_criteria": [
+        "Policies visible without scrolling"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Delivery timeframe displayed anywhere on PDP (near price, in details section, or clearly visible)",
+        "Shipping cost calculator or flat rate shown on PDP before add-to-cart",
+        "Return policy clearly linked or mentioned in product section (footer counts)",
+        "Trust badges (warranty, guarantee, returns) visible on PDP in any section"
+      ],
+      "context_notes": "Only flag if 3+ policy items are COMPLETELY missing from PDP (not just suboptimally placed). Presence in footer, expandable sections, or anywhere visible on page counts as 'available'. Focus on complete absence of: (1) delivery time, (2) shipping cost info, (3) return policy, (4) warranties. If 2 or fewer missing, do not flag.",
+      "minimum_missing_items": 3,
+      "refinement_v3_4": {
+        "reason": "Issue overstated in initial testing",
+        "sehaa_finding": "Flagged when condition not fully met",
+        "fix": "Strengthened evidence requirements and thresholds"
+      },
+      "detection_type": "absence"
+    },
+    {
+      "issue_id": "UX-006",
+      "domain": "ecommerce",
+      "page_type": [
+        "PDP"
+      ],
+      "issue_title": "Unclear add-to-cart flow",
+      "user_problem": "Users don't know required steps",
+      "dot_criterion": "Error prevention",
+      "nielsen_heuristic": [
+        "Error prevention"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Mandatory selection steps (size, color, quantity) not clearly marked as required",
+        "Add-to-cart button disabled or grayed out without explanation until options selected",
+        "No visible instruction text explaining option selections before add-to-cart is available",
+        "Error messages appear only after attempting to add product without required selections"
+      ],
+      "recommendation": "Guide users step-by-step before add to cart",
+      "acceptance_criteria": [
+        "System guides user through selections"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Required dropdowns marked with asterisk (*) or 'Required' label before interaction",
+        "Helpful text above dropdowns explains why selection is needed",
+        "Add-to-cart button clearly disabled with tooltip explaining what's needed",
+        "Default option shown for non-critical selections"
+      ],
+      "context_notes": "Only flag if requirements are unclear AND user gets error. Do not flag: Visual indicators (disabled button, asterisks) even if not perfect. Industry context: Configurable products (tech, apparel) require option selection; flag unclear communication, not the requirement itself.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-007",
+      "domain": "ecommerce",
+      "page_type": [
+        "Cart"
+      ],
+      "issue_title": "Forced cart redirection",
+      "user_problem": "Users cannot continue shopping",
+      "dot_criterion": "Flexibility & efficiency",
+      "nielsen_heuristic": [
+        "Flexibility of use"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Analytics",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Add-to-cart action immediately redirects to checkout without option to continue shopping",
+        "No Continue Shopping or Back to Products link visible after item added",
+        "Cart page forces checkout with no navigation back to product browsing",
+        "Shopping cart overlay or modal lacks return option to keep shopping"
+      ],
+      "recommendation": "Use add-to-cart overlay with continue shopping",
+      "acceptance_criteria": [
+        "Overlay allows continue shopping"
+      ],
+      "requires_checkout": false,
+      "requires_cart": true,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "'Continue Shopping' button visible after add-to-cart action",
+        "Add-to-cart triggers mini-cart drawer that allows continuing or going to cart",
+        "User remains on PDP after adding item, with confirmation message",
+        "Cart page includes prominent 'Back to Shopping' or category links"
+      ],
+      "context_notes": "Only flag if no way to continue shopping after add-to-cart. Do not flag: Brief redirect followed by continue option, or mini-cart that allows continuing. Industry context: Some niches (tickets, limited items) may intentionally push to checkout.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-008",
+      "domain": "ecommerce",
+      "page_type": [
+        "Checkout"
+      ],
+      "issue_title": "Misleading progress indicator",
+      "user_problem": "Users misjudge checkout length",
+      "dot_criterion": "Visibility of status",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "Major",
+      "evidence_type": "Analytics",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Progress bar shows more steps completed than actual checkout stages remaining (e.g., shows 75% when 50% done)",
+        "Progress indicator labels don't match actual checkout stages user must complete",
+        "Hidden steps appear after progress shows 80%+ completion (surprise additional steps)",
+        "Progress bar jumps backward or updates inconsistently as user progresses through checkout"
+      ],
+      "recommendation": "Align progress bar with real steps",
+      "acceptance_criteria": [
+        "Progress steps match actual flow"
+      ],
+      "requires_checkout": true,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Progress indicator shows all actual steps (if 5 steps, shows 5 segments)",
+        "Step labels match actual checkout stages user will complete",
+        "Progress bar fills accurately as user completes each stage",
+        "No hidden steps appear after progress shows 100%"
+      ],
+      "evidence_required": "full_checkout_flow_test",
+      "static_screenshot_sufficient": false,
+      "context_notes": "Requires testing complete checkout flow to verify accuracy. Only flag if: (1) Progress indicator demonstrably inaccurate (shows wrong % complete), OR (2) Step labels mislabel stages, OR (3) Hidden steps appear unexpectedly. Do not flag: Single-page checkouts with section indicators, or minor labeling differences. Cannot be verified from single screenshot.",
+      "refinement_v3_4": {
+        "reason": "Issue overstated in initial testing",
+        "sehaa_finding": "Flagged when condition not fully met",
+        "fix": "Strengthened evidence requirements and thresholds"
+      },
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-009",
+      "domain": "ecommerce",
+      "page_type": [
+        "Checkout"
+      ],
+      "issue_title": "Limited payment methods",
+      "user_problem": "Users abandon due to missing options",
+      "dot_criterion": "Flexibility",
+      "nielsen_heuristic": [
+        "Flexibility & efficiency"
+      ],
+      "severity": "Major",
+      "evidence_type": "Analytics",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Only credit card option available (no digital wallets, COD, or alternative payments)",
+        "Payment method selection limited to single provider (Stripe only, or single card type)",
+        "No Apple Pay, Google Pay, PayPal, or regional payment methods visible",
+        "Checkout flow does not offer installment plans or BNPL options where available"
+      ],
+      "recommendation": "Add Apple Pay, COD, wallets",
+      "acceptance_criteria": [
+        "Multiple payment methods available"
+      ],
+      "requires_checkout": true,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "At least 3 payment methods available (card, digital wallet, COD)",
+        "Popular local payment options included (e.g., Tabby, PayPal)",
+        "Payment icons visible before checkout to set expectations",
+        "Guest checkout allows multiple payment types"
+      ],
+      "detection_type": "absence"
+    },
+    {
+      "issue_id": "UX-010",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global"
+      ],
+      "issue_title": "Inconsistent CTA styles",
+      "user_problem": "Users can't identify primary actions",
+      "dot_criterion": "Consistency",
+      "nielsen_heuristic": [
+        "Consistency & standards"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Shop Now button uses different color or style across different pages (Homepage vs PLP vs PDP)",
+        "Primary CTAs (Add to Cart) mix button styles (outline, solid, ghost) across pages",
+        "Same action has different button text or visual treatment on different pages",
+        "CTAs within same page use conflicting colors, sizes, or typography weight"
+      ],
+      "recommendation": "Define and enforce CTA styles",
+      "acceptance_criteria": [
+        "Primary CTA consistent across site"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Primary CTA uses solid color, secondary actions use outline or ghost style",
+        "All primary CTAs use consistent color throughout site",
+        "Button hierarchy clear through size and color differentiation",
+        "Destructive actions use different color from primary"
+      ],
+      "context_notes": "Only flag if CTA styling is genuinely inconsistent AND confusing. Do not flag: Intentional variations for different action types (destructive vs. primary). Focus on: Whether user can identify what's clickable and primary action.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-011",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global"
+      ],
+      "issue_title": "Low text contrast",
+      "user_problem": "Low-vision users struggle to read",
+      "dot_criterion": "Accessibility",
+      "nielsen_heuristic": [
+        "Accessibility"
+      ],
+      "severity": "Major",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Body text or product descriptions use light gray text on white or light background",
+        "Secondary text or labels appear in very light gray without sufficient contrast to background",
+        "Product pricing or discount information difficult to read due to color contrast",
+        "Navigation links or interactive elements use low-contrast colors (light on light)"
+      ],
+      "recommendation": "Ensure WCAG AA contrast",
+      "acceptance_criteria": [
+        "Text meets WCAG AA contrast"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Body text meets WCAG AA contrast ratio (4.5:1 minimum)",
+        "All text readable without zooming or straining",
+        "Light gray text reserved only for truly optional secondary content",
+        "Important information (price, availability) uses high-contrast colors"
+      ],
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-012",
+      "domain": "ecommerce",
+      "page_type": [
+        "Checkout"
+      ],
+      "issue_title": "Unclear error messages",
+      "user_problem": "Error messages use technical jargon or unclear language",
+      "dot_criterion": "Error handling",
+      "nielsen_heuristic": [
+        "Help users recover"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Error messages use technical terms (Invalid SSL cert, 403 Forbidden, Malformed request)",
+        "Form validation errors do not specify what was wrong or how to fix it",
+        "Error text is vague (Error occurred, Try again later) without explanation",
+        "Multiple error messages appear without guidance on which field to correct first"
+      ],
+      "recommendation": "Use plain language error messages that clearly state what went wrong",
+      "acceptance_criteria": [
+        "Errors explain cause and recovery"
+      ],
+      "requires_checkout": true,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.5,
+      "evidence_required": "interactive_testing",
+      "static_screenshot_sufficient": false,
+      "flag_as_needs_verification": true,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Error messages use plain language explaining what's wrong",
+        "Messages explain what went wrong and how to fix it",
+        "No technical codes or jargon visible to users",
+        "Error messages are contextual to the specific field or action"
+      ],
+      "context_notes": "Only flag truly unclear error messages. Do not flag: Technical but understandable terms for technical audience. Industry context: Developer tools may use technical errors appropriately. Focus on: Whether target audience understands message.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-013",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global"
+      ],
+      "issue_title": "Lack of personalization",
+      "user_problem": "Users receive generic content despite sharing preferences",
+      "dot_criterion": "Personalisation",
+      "nielsen_heuristic": [
+        "Match system to real world"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Homepage or product recommendations appear identical for all users (no user-specific content)",
+        "Browse history, saved items, or wishlist not used to customize recommendations",
+        "Search results or category pages show same products regardless of user segment",
+        "No personalized messaging (Hello {name}, Your recent items, etc.) throughout site"
+      ],
+      "recommendation": "Use user preferences to personalize content and journeys",
+      "acceptance_criteria": [
+        "Personalized content appears based on user interests"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Homepage shows personalized recommendations based on browsing history",
+        "Returning users see 'Welcome back' with recently viewed items",
+        "Product suggestions based on previous purchases or viewed categories",
+        "User preferences (language, currency) remembered across sessions"
+      ],
+      "detection_type": "absence"
+    },
+    {
+      "issue_id": "UX-014",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global"
+      ],
+      "issue_title": "No anticipatory guidance",
+      "user_problem": "App does not proactively help users during journeys",
+      "dot_criterion": "Guidance & feedback",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "No contextual help, tooltips, or onboarding prompts visible during key tasks",
+        "Absence of cart abandonment reminders, discount alerts, or time-sensitive offers",
+        "No helpful suggestions (Did you know?, Tips, Try searching for) on empty states or slow pages",
+        "Product pages lack suggestions for next steps or related items to explore"
+      ],
+      "recommendation": "Add reminders, notifications, contextual tips",
+      "acceptance_criteria": [
+        "Users receive timely guidance without manual search"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "System suggests next steps contextually",
+        "Helpful tips appear at right moment",
+        "Proactive error prevention shown",
+        "Smart defaults based on previous behavior"
+      ],
+      "detection_type": "absence"
+    },
+    {
+      "issue_id": "UX-015",
+      "domain": "ecommerce",
+      "page_type": [
+        "Search"
+      ],
+      "issue_title": "Missing global search",
+      "user_problem": "Users struggle to find content quickly",
+      "dot_criterion": "Findability",
+      "nielsen_heuristic": [
+        "Recognition rather than recall"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "No search bar, search icon, or search field visible in header on Homepage",
+        "Search missing from header on Product Listing Pages (category/collection pages)",
+        "Search missing from header on Product Detail Pages",
+        "Search functionality accessible only through footer links or hidden menu (not in main header)"
+      ],
+      "recommendation": "Add persistent global search",
+      "acceptance_criteria": [
+        "Search available from all main screens"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "negative_signals": [
+        "Search bar prominently placed in header across Homepage, PLP, and PDP",
+        "Search icon visible in mobile header (collapsible or icon-only is acceptable)",
+        "Search accessible via one click from all major pages",
+        "Absence from checkout or cart overlay is acceptable (focused conversion flows)"
+      ],
+      "required_pages_to_check": [
+        "Homepage",
+        "PLP",
+        "PDP",
+        "Category"
+      ],
+      "acceptable_absence": [
+        "Checkout",
+        "Cart Overlay",
+        "Order Confirmation",
+        "Payment"
+      ],
+      "minimum_missing_pages": 2,
+      "context_notes": "Search must be missing from at least 2 of: Homepage, PLP, PDP, or Category pages. Absence from checkout/payment flows is expected.",
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "detection_type": "absence"
+    },
+    {
+      "issue_id": "UX-016",
+      "domain": "ecommerce",
+      "page_type": [
+        "Forms"
+      ],
+      "issue_title": "Missing error recovery guidance",
+      "user_problem": "Users receive errors but no clear path or instructions to fix them",
+      "dot_criterion": "Error handling",
+      "nielsen_heuristic": [
+        "Help users recover"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Error message text does not specify what was wrong or how to fix (e.g., 'Invalid input')",
+        "No indication of which form field contains error or needs correction",
+        "Help text or examples absent when form field error occurs",
+        "No link to support, FAQ, or undo action after error state"
+      ],
+      "recommendation": "Provide actionable recovery steps with each error (e.g., \"Try again\" or \"Contact support\")",
+      "acceptance_criteria": [
+        "Errors clearly explain cause and fix"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.5,
+      "evidence_required": "interactive_testing",
+      "static_screenshot_sufficient": false,
+      "flag_as_needs_verification": true,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Error messages include 'How to fix' instructions",
+        "Links to help articles or support provided with errors",
+        "Contact information shown when errors can't be self-resolved",
+        "Retry or alternative action buttons included"
+      ],
+      "context_notes": "Only flag if error provides no path forward. Do not flag: Clear error with obvious fix even without explicit instructions. Focus on: Whether user knows what to do next. Common false positive: Flagging messages that are clear from context.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-017",
+      "domain": "ecommerce",
+      "page_type": [
+        "Navigation"
+      ],
+      "issue_title": "Non-sticky headers",
+      "user_problem": "Users lose context when scrolling",
+      "dot_criterion": "Navigation",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Header/navigation menu disappears when user scrolls down the page",
+        "Logo not visible after scrolling below initial viewport",
+        "Shopping cart or account icon not accessible while scrolling content",
+        "No sticky breadcrumb trail or context indicator visible during scroll"
+      ],
+      "recommendation": "Make headers sticky on scroll",
+      "acceptance_criteria": [
+        "Header remains visible on scroll"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Header with navigation and cart remains visible during scroll",
+        "Product title and price stick to top on PDP when scrolling",
+        "Filter sidebar header remains visible during long filter lists",
+        "Key information accessible without scrolling back up"
+      ],
+      "context_notes": "Only flag for long-scrolling pages where losing context hinders task completion. Do not flag: Short pages, sticky headers with limited info, pages where scrolling up is natural. Context: PDP with long descriptions benefits more than short homepage. Mobile vs desktop may differ.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-020",
+      "domain": "ecommerce",
+      "page_type": [
+        "Mobile"
+      ],
+      "issue_title": "Small touch targets (general)",
+      "user_problem": "Interactive elements under 44x44px cause tap errors on mobile",
+      "dot_criterion": "Touch targets",
+      "nielsen_heuristic": [
+        "Error prevention"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Links or buttons appear significantly smaller than 44px square on mobile viewport",
+        "Navigation menu items closely spaced with insufficient padding",
+        "Add-to-cart or checkout buttons appear cramped without adequate spacing",
+        "Icon-only buttons without visible text label or adequate button size"
+      ],
+      "recommendation": "Increase touch target to 44px",
+      "acceptance_criteria": [
+        "All tappable elements meet size guidelines"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "All interactive elements minimum 44x44px on mobile",
+        "Adequate spacing between touch targets (8px+ gap)",
+        "Icon buttons have sufficient padding around the icon",
+        "Clickable areas extend beyond visible button edges"
+      ],
+      "context_notes": "All interactive elements should be minimum 44x44px on mobile viewports. Do not flag: Desktop-only interfaces, elements that expand on tap, or when adequate spacing prevents mis-taps. Only flag when: Mobile users would genuinely struggle to tap accurately. Test on actual mobile devices/viewports below 768px.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-021",
+      "domain": "ecommerce",
+      "page_type": [
+        "Homepage"
+      ],
+      "issue_title": "Weak value proposition above the fold",
+      "user_problem": "Users cannot quickly understand what the site offers",
+      "dot_criterion": "Clarity",
+      "nielsen_heuristic": [
+        "Match system to real world"
+      ],
+      "severity": "Major",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Hero section heading is vague (Welcome, Best Selection, Shop Now) without clear site mission",
+        "No supporting subheading or description explaining what products/services are offered",
+        "Value proposition buried below large visuals or placed lower on page",
+        "Unclear if site is for shoes, electronics, furniture, etc. from initial view"
+      ],
+      "recommendation": "Clarify value proposition with concise headline and subtext",
+      "acceptance_criteria": [
+        "Primary value proposition visible without scrolling"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Videos include captions or transcripts",
+        "Audio content has text alternative available",
+        "Video player has accessible controls with keyboard navigation",
+        "Captions can be toggled on/off by user"
+      ],
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-022",
+      "domain": "ecommerce",
+      "page_type": [
+        "Homepage"
+      ],
+      "issue_title": "Hero visuals distract from task",
+      "user_problem": "Large visuals delay task completion",
+      "dot_criterion": "Focus",
+      "nielsen_heuristic": [
+        "Aesthetic & minimalist design"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Hero image takes up more than 50% of initial viewport height",
+        "Primary CTA button difficult to spot amid large hero graphic",
+        "Users must scroll significantly to see main navigation or product categories",
+        "Hero section provides no clear entry point to primary user task (search, browse, etc.)"
+      ],
+      "recommendation": "Reduce hero size or add clear task CTA",
+      "acceptance_criteria": [
+        "Users can identify primary task immediately"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "negative_signals": [
+        "Hero section occupies less than 40% of viewport height",
+        "Primary CTA clearly visible above fold without scrolling",
+        "Hero provides immediate access to main shopping task (search, browse, featured products)",
+        "Hero content is relevant product photography, not generic lifestyle imagery"
+      ],
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "context_notes": "Only flag if hero occupies >50% of initial viewport AND pushes primary shopping task below fold. Do not flag if: Hero is large but includes product showcase or clear shopping entry point. Industry context: Lifestyle/brand-focused sites may intentionally use large heroes; flag only when it hinders task completion.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-023",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global"
+      ],
+      "issue_title": "Inconsistent icon usage",
+      "user_problem": "Icons mean different things across pages",
+      "dot_criterion": "Consistency",
+      "nielsen_heuristic": [
+        "Consistency & standards"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Cart icon used differently on Homepage vs PDP (different style, color, or placement)",
+        "Search icon represented differently across navigation and header",
+        "Star/heart icon for favorites shown in different style on different pages",
+        "Menu icon burger/hamburger design changes between layouts"
+      ],
+      "recommendation": "Standardize icon usage and meaning",
+      "acceptance_criteria": [
+        "Icons behave consistently site-wide"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Same icon represents same function sitewide",
+        "Icon style consistent (all outlined or all filled)",
+        "Icon meanings follow common conventions",
+        "Icon + text label used consistently for clarity"
+      ],
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-024",
+      "domain": "ecommerce",
+      "page_type": [
+        "Navigation"
+      ],
+      "issue_title": "Overloaded main navigation",
+      "user_problem": "Too many menu items overwhelm users",
+      "dot_criterion": "Navigation",
+      "nielsen_heuristic": [
+        "Recognition rather than recall"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Main navigation contains 10+ top-level items without clear grouping or hierarchy",
+        "Navigation menu items compete for attention without clear visual organization",
+        "No differentiation between primary categories and secondary utility links in navigation",
+        "Navigation requires horizontal scrolling or wrapping to show all items"
+      ],
+      "recommendation": "Group navigation items and reduce top-level options",
+      "acceptance_criteria": [
+        "Navigation limited to manageable categories"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Main navigation has 5-7 top-level items maximum",
+        "Categories logically grouped with clear labels",
+        "Mega menu organizes subcategories with visual hierarchy",
+        "Less important links moved to footer or utility navigation"
+      ],
+      "context_notes": "Only flag if navigation has 10+ top-level items AND lacks clear organization. Standard 7-9 item navigation is acceptable if well-organized. Do not flag: Mega menus with good categorization, or navigation with clear primary/secondary distinction. Industry context: Large marketplaces may legitimately have more categories. Focus on: Whether navigation is overwhelming, not just number of items.",
+      "threshold": 10,
+      "refinement_v3_4": {
+        "reason": "Issue overstated in initial testing",
+        "sehaa_finding": "Flagged when condition not fully met",
+        "fix": "Strengthened evidence requirements and thresholds"
+      },
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-025",
+      "domain": "ecommerce",
+      "page_type": [
+        "Navigation"
+      ],
+      "issue_title": "No clear active state",
+      "user_problem": "Users don't know where they are",
+      "dot_criterion": "Orientation",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Current page menu item not visually distinguished from other navigation items",
+        "No color, underline, bold, or highlight indicating which page user is on",
+        "Breadcrumb trail absent or not highlighting current location",
+        "Page title does not match active navigation item language/style"
+      ],
+      "recommendation": "Add clear active state styling",
+      "acceptance_criteria": [
+        "Active page clearly highlighted"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Clear visual hierarchy with distinct heading sizes",
+        "Important content uses larger fonts and bolder weights",
+        "Related content visually grouped with whitespace",
+        "Call-to-action elements stand out through size and color"
+      ],
+      "detection_type": "absence"
+    },
+    {
+      "issue_id": "UX-026",
+      "domain": "ecommerce",
+      "page_type": [
+        "Search"
+      ],
+      "issue_title": "Search results lack relevance cues",
+      "user_problem": "Users cannot judge result usefulness",
+      "dot_criterion": "Findability",
+      "nielsen_heuristic": [
+        "Recognition rather than recall"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Search results page shows products without images or key product information",
+        "Results list lacks category labels, ratings, or prices to help differentiate items",
+        "No visual grouping or sort order clues (relevance score, popularity badges) visible",
+        "Result snippets too brief to evaluate match quality"
+      ],
+      "recommendation": "Add thumbnails, categories, or highlights",
+      "acceptance_criteria": [
+        "Results clearly differentiated"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Search results show product images, price, and key specs",
+        "Results include category tags or filters applied",
+        "Relevance indicators like 'Best Match' shown",
+        "Search term highlighted in results"
+      ],
+      "context_notes": "Only flag if search results genuinely lack helpful information. Do not flag: Minimal but sufficient info (image + price + title is often adequate). Industry context: Marketplace sites need more detail than single-brand stores. Focus on: Whether user can evaluate results.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-027",
+      "domain": "ecommerce",
+      "page_type": [
+        "PLP"
+      ],
+      "issue_title": "Missing sorting options",
+      "user_problem": "Users can’t control product order",
+      "dot_criterion": "Control",
+      "nielsen_heuristic": [
+        "User control & freedom"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Product listing page displays no sort options dropdown or buttons",
+        "Sort controls hidden in secondary menu instead of prominently displayed with results",
+        "Only basic sort available (oldest to newest) without common options (price, relevance, popularity)",
+        "No ability to reverse sort order (ascending/descending)"
+      ],
+      "acceptance_criteria": [
+        "Users can easily reorder results"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "negative_signals": [
+        "Sort dropdown offers at least 3 relevant options (Price, Popularity, Newest)",
+        "Sort controls prominently displayed above product grid",
+        "Sort includes both ascending and descending for price/date",
+        "Default sort option clearly indicated"
+      ],
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "context_notes": "Single-category pages with <10 products may not need sorting. B2B sites may prioritize different sorts than B2C. Medical/regulated products may limit sort by price for compliance reasons. Only flag when: PLP has 15+ products AND sort completely absent AND would benefit user decision-making.",
+      "detection_type": "absence"
+    },
+    {
+      "issue_id": "UX-028",
+      "domain": "ecommerce",
+      "page_type": [
+        "PLP"
+      ],
+      "issue_title": "Filters reset unexpectedly",
+      "user_problem": "Users lose applied filters",
+      "dot_criterion": "Predictability",
+      "nielsen_heuristic": [
+        "Consistency & standards"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Applied filters (e.g., color=red, price=0-50) disappear after navigating to related page",
+        "Filter state not preserved in URL or via page back navigation",
+        "User must re-apply filters after clicking individual product or pagination",
+        "No indicator or reminder showing filters are active when returning to listings"
+      ],
+      "acceptance_criteria": [
+        "Filters remain applied until cleared"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Applied filters persist when navigating to product and back",
+        "Filter state maintained in URL parameters",
+        "Browser back button restores previous filter selections",
+        "Badge shows active filters when returning to PLP"
+      ],
+      "context_notes": "Only flag if filters reset unexpectedly during same session. Do not flag: Filter reset between different sessions (acceptable), or when navigating to unrelated category. Common false positive: Browser back button behavior that's actually browser-standard.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-029",
+      "domain": "ecommerce",
+      "page_type": [
+        "PLP"
+      ],
+      "issue_title": "Filter labels unclear",
+      "user_problem": "Users don’t understand filter meaning",
+      "dot_criterion": "Clarity",
+      "nielsen_heuristic": [
+        "Match system to real world"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Filter labels use jargon or abbreviations (SKU, GTIN, Material Code) instead of common terms",
+        "Filter options unclear (e.g., 'Fit Type: A, B, C' without explanation what A/B/C mean)",
+        "Filter categories not organized logically (Price before Size, Color below Weight, etc.)",
+        "No help text or examples showing what filtering by each option does"
+      ],
+      "acceptance_criteria": [
+        "Filters are self-explanatory"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Filter labels use common terms not codes",
+        "Filter options clearly describe what they do",
+        "Help tooltips available for complex filters",
+        "Filter categories organized in logical order"
+      ],
+      "context_notes": "Only flag if filter labels are genuinely unclear (codes, abbreviations, jargon). Do not flag: Industry-standard terms (e.g., 'Bluetooth 5.0' for electronics is clear to target audience). Industry context: Technical products may use technical terms appropriately.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-030",
+      "domain": "ecommerce",
+      "page_type": [
+        "PDP"
+      ],
+      "issue_title": "Product images lack zoom/detail",
+      "user_problem": "Users can’t inspect product properly",
+      "dot_criterion": "Confidence",
+      "nielsen_heuristic": [
+        "Help users recognize"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Product images appear small or pixelated on PDP",
+        "Single static image shown without thumbnail gallery or additional views",
+        "No zoom functionality available (click to enlarge, magnifying glass, etc.)",
+        "Images from different angles or details not provided for product inspection"
+      ],
+      "acceptance_criteria": [
+        "Users can clearly inspect product"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Product images clickable to open large view or zoom",
+        "Zoom functionality available on hover or click",
+        "Multiple images at high resolution provided",
+        "360-degree view or video available for complex products"
+      ],
+      "context_notes": "Only flag if no way to view product detail (no zoom, single small image, no enlargement). Do not flag: High-res images even without explicit zoom. Industry context: Digital products may not need zoom; physical products typically do.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-031",
+      "domain": "ecommerce",
+      "page_type": [
+        "PDP"
+      ],
+      "issue_title": "Reviews hard to find",
+      "user_problem": "Users don’t see social proof",
+      "dot_criterion": "Trust",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Product reviews or ratings not visible until scrolling below price/add-to-cart section",
+        "Review section buried in tabs or collapsed sections instead of prominently displayed",
+        "Star rating or review count not shown near product title or price",
+        "No aggregated reviews summary (e.g., '4.5 stars from 256 reviews') visible above fold"
+      ],
+      "acceptance_criteria": [
+        "Reviews visible early on PDP"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Reviews section visible on PDP without scrolling far",
+        "Star rating displayed prominently near product title",
+        "Review count clickable to jump to reviews",
+        "Review summary shown above fold"
+      ],
+      "detection_type": "absence"
+    },
+    {
+      "issue_id": "UX-032",
+      "domain": "ecommerce",
+      "page_type": [
+        "PDP"
+      ],
+      "issue_title": "Stock availability unclear",
+      "user_problem": "Users unsure if item is available",
+      "dot_criterion": "Status visibility",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Product cards on PLP lack any stock status indicator (no 'In Stock', 'Out of Stock', 'Low Stock' badges)",
+        "Stock information inconsistent (some products show status, others don't for no clear reason)",
+        "Out-of-stock items displayed without clear unavailability indication or disabled add-to-cart",
+        "PDP shows no stock status before user attempts to add to cart"
+      ],
+      "acceptance_criteria": [
+        "Availability shown before add-to-cart"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "negative_signals": [
+        "All product cards consistently show stock status (In Stock, Out of Stock, Low Stock)",
+        "Stock availability visible without hovering or clicking",
+        "Out-of-stock items clearly marked with Add to Cart disabled",
+        "Stock status uses consistent color coding (green=available, red=unavailable)"
+      ],
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "context_notes": "Must test multiple scenarios: (1) In-stock products, (2) Out-of-stock products, (3) Low-stock products. Only flag if: Inconsistent display (some show, some don't) OR out-of-stock items not clearly marked OR completely missing from all products. Do not flag: Consistent 'In Stock' on all available items if out-of-stock products are removed from display or clearly marked. Industry context: Some luxury brands intentionally hide stock levels.",
+      "verification_required": "multiple_product_scenarios",
+      "refinement_v3_4": {
+        "reason": "Issue overstated in initial testing",
+        "sehaa_finding": "Flagged when condition not fully met",
+        "fix": "Strengthened evidence requirements and thresholds"
+      },
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-033",
+      "domain": "ecommerce",
+      "page_type": [
+        "PDP"
+      ],
+      "issue_title": "Pricing lacks breakdown",
+      "user_problem": "Users surprised by final cost",
+      "dot_criterion": "Transparency",
+      "nielsen_heuristic": [
+        "Help users recover"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Product price displayed without showing tax, duty, or shipping fees on PDP",
+        "Final cost only revealed at checkout, not in cart summary",
+        "No breakdown showing base price vs. taxes vs. shipping before purchase",
+        "Discount or promotion applied but final savings amount not clearly calculated"
+      ],
+      "acceptance_criteria": [
+        "Total cost expectations set early"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Price breakdown shows subtotal, tax, shipping before checkout",
+        "Final price with all fees visible on cart page",
+        "Each line item shows individual price and quantity",
+        "Currency and VAT/tax inclusion clearly stated"
+      ],
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-034",
+      "domain": "ecommerce",
+      "page_type": [
+        "Cart"
+      ],
+      "issue_title": "Editable cart items unclear",
+      "user_problem": "Users don’t know how to update cart",
+      "dot_criterion": "Control",
+      "nielsen_heuristic": [
+        "User control & freedom"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Edit quantity or remove buttons for cart items not visible or clearly labeled",
+        "Quantity field not easily editable (requires right-click menu, special click, etc.)",
+        "Remove/delete option hidden in submenu or requires multiple steps",
+        "Cart line items appear uneditable or static without clear affordance"
+      ],
+      "acceptance_criteria": [
+        "Users can easily edit cart"
+      ],
+      "requires_checkout": false,
+      "requires_cart": true,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Edit quantity with clearly visible +/- buttons or input field",
+        "Remove button visible on each cart item",
+        "Edit options accessible without re-adding product",
+        "Save for later option available"
+      ],
+      "context_notes": "Only flag if edit/remove actions are genuinely hidden or unclear. Do not flag: Standard patterns (trash icon, +/- buttons) even if not labeled. Focus on: Whether average user can modify cart without help.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-035",
+      "domain": "ecommerce",
+      "page_type": [
+        "Cart"
+      ],
+      "issue_title": "Shipping costs revealed late",
+      "user_problem": "Users abandon due to surprises",
+      "dot_criterion": "Transparency",
+      "nielsen_heuristic": [
+        "Error prevention"
+      ],
+      "severity": "Major",
+      "evidence_type": "Analytics",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Cart page shows subtotal but no shipping cost estimate above checkout button",
+        "Shipping cost only calculated after entering address at checkout",
+        "No visible shipping cost in cart summary or order total",
+        "Free shipping threshold not indicated if applicable (e.g., 'Free shipping on orders over $50')"
+      ],
+      "acceptance_criteria": [
+        "Shipping costs visible before checkout"
+      ],
+      "requires_checkout": false,
+      "requires_cart": true,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Shipping cost calculated and shown on cart or early in checkout",
+        "Shipping calculator available with postal code input",
+        "Free shipping threshold clearly displayed",
+        "Shipping costs visible before payment information"
+      ],
+      "context_notes": "Only flag if shipping cost hidden until final checkout step. Do not flag if: Cost shown on cart page, shipping calculator available, or free shipping clearly stated. Industry context: Some regions require checkout for accurate shipping; flag based on when user learns cost relative to commitment level.",
+      "detection_type": "absence"
+    },
+    {
+      "issue_id": "UX-036",
+      "domain": "ecommerce",
+      "page_type": [
+        "Checkout"
+      ],
+      "issue_title": "Guest checkout not available",
+      "user_problem": "Users forced to create accounts",
+      "dot_criterion": "Flexibility",
+      "nielsen_heuristic": [
+        "Flexibility & efficiency"
+      ],
+      "severity": "Major",
+      "evidence_type": "Analytics",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Checkout page requires account creation before proceeding with order",
+        "No prominent Guest Checkout or Continue as Guest option visible",
+        "Guest option buried deep in checkout flow rather than offered upfront",
+        "Account creation mandatory with no skip or bypass available"
+      ],
+      "acceptance_criteria": [
+        "Guest checkout clearly offered"
+      ],
+      "requires_checkout": true,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Guest checkout prominently offered as primary option",
+        "'Continue as Guest' button equal or larger than account login",
+        "Guest checkout doesn't require account creation",
+        "Account creation offered after purchase, not forced"
+      ],
+      "context_notes": "Only flag if account creation is REQUIRED to complete purchase. Do not flag if: Guest checkout available even if account login is prominent. Industry context: B2B or regulated products (alcohol, pharma) may legitimately require accounts; flag based on industry norms.",
+      "detection_type": "absence"
+    },
+    {
+      "issue_id": "UX-037",
+      "domain": "ecommerce",
+      "page_type": [
+        "Checkout"
+      ],
+      "issue_title": "Form fields not grouped logically",
+      "user_problem": "Users struggle to complete checkout",
+      "dot_criterion": "Structure",
+      "nielsen_heuristic": [
+        "Aesthetic & minimalist design"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Checkout form displays billing and shipping fields randomly mingled (address line 1, city, billing address, zip, shipping address line 2)",
+        "No visual grouping or section headers separating billing, shipping, payment information",
+        "Fields not organized in typical flow order (shipping address, billing address, payment)",
+        "Form lacks spacing or dividers making sections unclear"
+      ],
+      "acceptance_criteria": [
+        "Forms visually segmented"
+      ],
+      "requires_checkout": true,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Form fields grouped logically",
+        "Related fields visually grouped with borders or spacing",
+        "Clear section headings separate different form areas",
+        "Logical tab order follows visual grouping"
+      ],
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-038",
+      "domain": "ecommerce",
+      "page_type": [
+        "Checkout"
+      ],
+      "issue_title": "No inline validation",
+      "user_problem": "Users discover errors too late",
+      "dot_criterion": "Error prevention",
+      "nielsen_heuristic": [
+        "Error prevention"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Form field errors only shown when user submits entire form, not during entry",
+        "No real-time feedback as user types (e.g., email field doesn't check format until blur/submit)",
+        "Required fields not marked until user attempts submission",
+        "No character count or validation hints as user fills field"
+      ],
+      "acceptance_criteria": [
+        "Errors shown as user types"
+      ],
+      "requires_checkout": true,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.5,
+      "evidence_required": "interactive_testing",
+      "static_screenshot_sufficient": false,
+      "flag_as_needs_verification": true,
+      "context_notes": "Cannot verify from static screenshots. Requires: (1) Video of form interaction, (2) Testing email/phone validation, (3) Observing error timing.",
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Form fields show validation as user types or on blur",
+        "Checkmarks appear when field correctly filled",
+        "Error messages appear immediately when user leaves invalid field",
+        "Password strength indicator updates in real-time"
+      ],
+      "detection_type": "absence"
+    },
+    {
+      "issue_id": "UX-039",
+      "domain": "ecommerce",
+      "page_type": [
+        "Checkout"
+      ],
+      "issue_title": "Primary CTA below the fold on page load",
+      "user_problem": "Main conversion button not visible without scrolling down initially",
+      "dot_criterion": "Visibility",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Complete Checkout or Place Order button located far down page requiring scroll after loading",
+        "Primary CTA button not visible in initial viewport on checkout page",
+        "Pay Now or Submit Order button positioned below fold on mobile",
+        "CTA obscured by sticky elements or overlaid content"
+      ],
+      "acceptance_criteria": [
+        "CTA always visible"
+      ],
+      "requires_checkout": true,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Primary CTA visible in initial viewport without scrolling",
+        "Add-to-cart or checkout button appears above fold",
+        "Mobile layout ensures CTA visible in first screen",
+        "Sticky CTA appears if main button scrolls out"
+      ],
+      "context_notes": "Only flag if: Primary CTA not visible on initial page load AND no sticky CTA appears when scrolling. Do not flag: Mobile layouts where some scroll expected, or if CTA becomes sticky when main scrolls out. Context: 'Above fold' varies by device; focus on accessibility within first screen.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-040",
+      "domain": "ecommerce",
+      "page_type": [
+        "Checkout"
+      ],
+      "issue_title": "Security reassurance missing",
+      "user_problem": "Users doubt payment safety",
+      "dot_criterion": "Trust",
+      "nielsen_heuristic": [
+        "Help users recover"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Checkout page lacks trust badges, security icons, or SSL certificate indicators",
+        "No reassuring text about payment security (e.g., Your payment is secure, Encrypted, PCI compliant)",
+        "Payment section does not display security logos (Visa, Mastercard, Stripe, etc.)",
+        "No privacy policy disclosure or data protection statement near payment form"
+      ],
+      "acceptance_criteria": [
+        "Security reassurance visible"
+      ],
+      "requires_checkout": true,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Security badges visible on checkout",
+        "Trust indicators shown near payment input fields",
+        "Privacy policy link clearly available during checkout",
+        "Secure connection emphasized"
+      ],
+      "detection_type": "absence"
+    },
+    {
+      "issue_id": "UX-041",
+      "domain": "ecommerce",
+      "page_type": [
+        "Account"
+      ],
+      "issue_title": "Password requirements unclear or missing",
+      "user_problem": "Users don't know password rules, leading to weak passwords or frustration",
+      "dot_criterion": "Error prevention",
+      "nielsen_heuristic": [
+        "Error prevention"
+      ],
+      "severity": "High",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Password creation field shows no guidance on requirements (length, special chars, numbers)",
+        "Requirements text appears only AFTER entering password instead of upfront",
+        "No met/unmet validation checklist (✓ 8 characters, ✗ Special character needed, etc.)",
+        "Password meter or strength indicator absent"
+      ],
+      "acceptance_criteria": [
+        "Password rules clear before entry"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.5,
+      "evidence_required": "interactive_testing",
+      "static_screenshot_sufficient": false,
+      "flag_as_needs_verification": true,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Password requirements shown next to password field",
+        "Real-time validation shows which requirements are met",
+        "Requirements displayed as checklist",
+        "Password strength meter visible as user types"
+      ],
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-042",
+      "domain": "ecommerce",
+      "page_type": [
+        "Account"
+      ],
+      "issue_title": "Password reset flow confusing",
+      "user_problem": "Users abandon recovery",
+      "dot_criterion": "Recovery",
+      "nielsen_heuristic": [
+        "Help users recover"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Forgot Password link not prominent or easily found on login page",
+        "Reset flow requires multiple steps (email verification, confirmation link, etc.) without clear instructions",
+        "No feedback or progress indication during password reset process",
+        "Password reset link expires quickly or error handling unclear"
+      ],
+      "acceptance_criteria": [
+        "Reset process clear and short"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.5,
+      "evidence_required": "interactive_testing",
+      "static_screenshot_sufficient": false,
+      "flag_as_needs_verification": true,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Password reset completed in 2-3 clear steps",
+        "Email sent immediately with reset link and instructions",
+        "Reset link works on first click",
+        "Success confirmation shown after password updated"
+      ],
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-043",
+      "domain": "ecommerce",
+      "page_type": [
+        "Mobile"
+      ],
+      "issue_title": "Horizontal scrolling issues",
+      "user_problem": "Content overflows screen",
+      "dot_criterion": "Responsiveness",
+      "nielsen_heuristic": [
+        "Flexibility & efficiency"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Content or layout extends beyond screen width on mobile, requiring horizontal scroll",
+        "Images or tables overflow viewport without responsive scaling",
+        "Navigation menu does not adapt to mobile (still wide desktop layout)",
+        "Form fields or buttons too wide for mobile screen"
+      ],
+      "acceptance_criteria": [
+        "No horizontal scroll on mobile"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "All content fits within viewport width without horizontal scroll",
+        "Images and containers scale to screen size",
+        "Tables responsive or scrollable within container",
+        "No fixed-width elements exceeding viewport"
+      ],
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-044",
+      "domain": "ecommerce",
+      "page_type": [
+        "Mobile"
+      ],
+      "issue_title": "Primary CTAs too small on mobile",
+      "user_problem": "Critical conversion buttons are undersized for mobile touch interaction",
+      "dot_criterion": "Touch ergonomics",
+      "nielsen_heuristic": [
+        "Error prevention"
+      ],
+      "severity": "Major",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Button with less than 44px height or width on mobile viewport",
+        "Primary CTA missing adequate padding or spacing from other elements",
+        "Add-to-cart or checkout button appears cramped or overlaps other controls",
+        "Mobile view shows button smaller than recommended 44x44 touch target"
+      ],
+      "recommendation": "Increase CTA size and spacing",
+      "acceptance_criteria": [
+        "CTAs meet touch target guidelines"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Primary CTAs (Add to Cart, Checkout, Buy Now) are minimum 44x44px on mobile",
+        "Conversion buttons have adequate padding and spacing from other elements",
+        "Critical action buttons sized appropriately for thumb-friendly interaction",
+        "Mobile CTAs meet accessibility guidelines for touch targets"
+      ],
+      "context_notes": "Critical conversion buttons (Add to Cart, Checkout, Buy Now) must be minimum 44x44px on mobile. Do not flag: Desktop sizing, buttons that expand on tap, or adequate spacing prevents mis-taps. Industry context: Touch target requirements are accessibility standard, not opinion.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-045",
+      "domain": "ecommerce",
+      "page_type": [
+        "Performance"
+      ],
+      "issue_title": "Slow perceived load",
+      "user_problem": "Users think site is broken",
+      "dot_criterion": "Feedback",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "No loading indicator spinner or progress bar visible during page load",
+        "No skeleton screens or placeholder content shown while loading",
+        "Long delay before main content appears without any feedback",
+        "Loading animation missing from above-the-fold content area"
+      ],
+      "recommendation": "Add skeleton loaders or progress indicators",
+      "acceptance_criteria": [
+        "Loading feedback visible"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Page loads to usable state within 3 seconds",
+        "Critical content appears before non-critical elements",
+        "Loading skeleton screens show where content will appear",
+        "Progressive enhancement loads secondary content after primary"
+      ],
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-046",
+      "domain": "ecommerce",
+      "page_type": [
+        "Performance"
+      ],
+      "issue_title": "No loading indicators",
+      "user_problem": "Users unsure system is responding",
+      "dot_criterion": "Feedback",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Search results or filtered list returns without spinner element",
+        "Form submission completes without loading state indicator",
+        "Ajax requests show no visual feedback during processing",
+        "Content loads dynamically with no progress indicator shown"
+      ],
+      "recommendation": "Show spinners or loaders",
+      "acceptance_criteria": [
+        "Users see system is working"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Spinner or loading animation appears during async operations",
+        "Button shows loading state when clicked",
+        "Progress indicator for multi-step operations",
+        "Skeleton screens show during content loading"
+      ],
+      "detection_type": "absence"
+    },
+    {
+      "issue_id": "UX-047",
+      "domain": "ecommerce",
+      "page_type": [
+        "Accessibility"
+      ],
+      "issue_title": "Missing focus states",
+      "user_problem": "Keyboard users lose context",
+      "dot_criterion": "Accessibility",
+      "nielsen_heuristic": [
+        "Accessibility"
+      ],
+      "severity": "Major",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Interactive elements lack visible outline or border when focused",
+        "No color change or visual indicator on focused button or link",
+        "Focus ring completely hidden or removed via CSS outline none",
+        "Keyboard navigation makes header navigation lose visible focus state"
+      ],
+      "recommendation": "Add visible focus indicators",
+      "acceptance_criteria": [
+        "Focus clearly visible"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Forms auto-save draft data every 30-60 seconds",
+        "Browser remembers form data if user navigates away",
+        "Warning shown before losing unsaved changes",
+        "Return to saved progress option available"
+      ],
+      "detection_type": "absence"
+    },
+    {
+      "issue_id": "UX-048",
+      "domain": "ecommerce",
+      "page_type": [
+        "Accessibility"
+      ],
+      "issue_title": "Images missing alt text",
+      "user_problem": "Screen reader users miss context",
+      "dot_criterion": "Accessibility",
+      "nielsen_heuristic": [
+        "Accessibility"
+      ],
+      "severity": "Major",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Product images in PDP or PLP have empty alt attributes",
+        "Decorative images lacking role=presentation or aria-hidden",
+        "Hero image or banner lacks descriptive alt text",
+        "Category or product thumbnail missing alt description"
+      ],
+      "recommendation": "Provide meaningful alt text",
+      "acceptance_criteria": [
+        "All images have alt text"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "All images have descriptive alt attributes",
+        "Alt text describes image content and context",
+        "Decorative images have empty alt or marked decorative",
+        "Complex images include longer descriptions"
+      ],
+      "context_notes": "Only flag missing alt text on functional images. Do not flag: Decorative images with empty alt. Industry context: Accessibility requirement, not opinion. Focus on: Screen reader usability.",
+      "detection_type": "absence"
+    },
+    {
+      "issue_id": "UX-049",
+      "domain": "ecommerce",
+      "page_type": [
+        "Content"
+      ],
+      "issue_title": "Jargon-heavy copy",
+      "user_problem": "Users don't understand terminology",
+      "dot_criterion": "Clarity",
+      "nielsen_heuristic": [
+        "Match system to real world"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Product description uses technical specifications without layman explanation",
+        "Form labels use domain jargon unfamiliar to general users",
+        "Error message contains technical terminology without plain language",
+        "Feature explanation uses industry acronyms or terms without definition"
+      ],
+      "recommendation": "Replace jargon with plain language",
+      "acceptance_criteria": [
+        "Copy is easy to understand"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Important content accessible with keyboard",
+        "Focus indicators visible on all interactive elements",
+        "Skip navigation link available",
+        "Dropdowns and modals operable without mouse"
+      ],
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-050",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global"
+      ],
+      "issue_title": "Inconsistent terminology",
+      "user_problem": "Same concept named differently",
+      "dot_criterion": "Consistency",
+      "nielsen_heuristic": [
+        "Consistency & standards"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Navigation uses both product and item to describe same concept",
+        "Headers reference shopping cart on one page and cart summary on another",
+        "Button labels vary (Save vs Store, Buy vs Purchase) for same action",
+        "Footer links use different terminology than header for same destination"
+      ],
+      "recommendation": "Standardize terminology across site",
+      "acceptance_criteria": [
+        "Terminology consistent"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Same concept uses same term throughout site",
+        "UI labels match menu labels match page titles",
+        "Action verbs consistent",
+        "Terminology guide followed"
+      ],
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-051",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global",
+        "Forms",
+        "Checkout"
+      ],
+      "issue_title": "Weak error recovery and dead-end handling",
+      "user_problem": "When something goes wrong (error, unavailable option, failed action), users don’t know what to do next and feel stuck.",
+      "dot_criterion": "Error recovery & resilience",
+      "nielsen_heuristic": [
+        "Help users recognize",
+        "diagnose",
+        "and recover from errors"
+      ],
+      "severity": "Major",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Error message lacks actionable recovery instructions or next steps",
+        "Error modal or alert shows problem but no solution or retry button",
+        "Failed transaction leaves user stuck without clear back navigation",
+        "Form error only highlights field but doesn't explain how to fix it"
+      ],
+      "recommendation": "Provide clear error messages with recovery options (retry, alternative path, support).",
+      "acceptance_criteria": [
+        "Error states explain what happened and offer a clear next step (retry/back/alternative/support)."
+      ],
+      "requires_checkout": true,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.5,
+      "evidence_required": "interactive_testing",
+      "static_screenshot_sufficient": false,
+      "flag_as_needs_verification": true,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Errors include actionable next steps or retry buttons",
+        "Alternative options offered when primary path fails",
+        "Contact support easily accessible from error states",
+        "Clear path back to working state provided"
+      ],
+      "context_notes": "Only flag genuine dead-ends (error with no recovery path). Do not flag: Errors with back button, contact option, or obvious recovery. Focus on: Whether user has ANY way forward from error state.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-052",
+      "domain": "ecommerce",
+      "page_type": [
+        "Checkout",
+        "Forms",
+        "Account"
+      ],
+      "issue_title": "Insufficient system feedback during multi-step actions",
+      "user_problem": "Users aren’t sure whether the system is processing their action, causing anxiety and abandonment.",
+      "dot_criterion": "Feedback & system status",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "Major",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Progress indicator or step counter missing during checkout process",
+        "Submit button shows no loading state or disabled state when processing",
+        "Form submission lacks spinner or visual indication during processing",
+        "Multi-step flow lacks visual progress bar or breadcrumb navigation"
+      ],
+      "recommendation": "Show progress/status feedback (loading, steps, confirmations) during multi-step actions.",
+      "acceptance_criteria": [
+        "Users see immediate status feedback and progress indicators until the action completes."
+      ],
+      "requires_checkout": true,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Loading states, confirmations, and processing feedback provided",
+        "User knows system is working",
+        "Multi-step actions show which step is in progress",
+        "Completion confirmation appears after action finishes"
+      ],
+      "detection_type": "absence"
+    },
+    {
+      "issue_id": "UX-053",
+      "domain": "ecommerce",
+      "page_type": [
+        "Checkout",
+        "Booking"
+      ],
+      "issue_title": "Poor expectation setting before irreversible actions",
+      "user_problem": "Users commit to an action without understanding prerequisites, constraints, or consequences, leading to surprise and frustration.",
+      "dot_criterion": "Process transparency",
+      "nielsen_heuristic": [
+        "Match between system and the real world"
+      ],
+      "severity": "Major",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Booking or purchase button lacks clear terms or cancellation policy link",
+        "Checkout submit button missing warning about non-refundable charges",
+        "Irreversible action triggered without confirmation dialog or summary",
+        "Booking date/time selection unclear about timezone or availability constraints"
+      ],
+      "recommendation": "Set clear expectations before commitment (requirements, constraints, what happens next).",
+      "acceptance_criteria": [
+        "Before committing, users can understand key constraints and consequences of the action."
+      ],
+      "requires_checkout": true,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Actions with consequences show preview or confirmation",
+        "Irreversible actions require explicit confirmation",
+        "Prerequisites clearly stated before action button",
+        "Warning messages explain what will happen"
+      ],
+      "context_notes": "Only flag irreversible actions without ANY confirmation. Do not flag: Delete with undo option, or consequence is obvious. Industry context: Bulk actions, payments, deletions should require confirmation. Focus on: Risk level of action.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-054",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global"
+      ],
+      "issue_title": "Mismatch between explanatory content and interaction behavior",
+      "user_problem": "What the UI says (help text/FAQs/tooltips) doesn't match what actually happens, causing confusion or distrust.",
+      "dot_criterion": "Content-behavior alignment",
+      "nielsen_heuristic": [
+        "Consistency and standards"
+      ],
+      "severity": "Major",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Help text mentions free shipping but checkout shows shipping charges",
+        "Label says optional but form validation requires the field",
+        "Tooltip promises real-time updates but feature works with delay",
+        "FAQ describes process different from actual implementation in UI"
+      ],
+      "recommendation": "Align explanatory content with real interaction behavior and edge cases.",
+      "acceptance_criteria": [
+        "Guidance text matches the actual flow and outcomes users experience."
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Help text accurately describes what happens",
+        "FAQs match actual system behavior",
+        "Tooltips provide accurate information",
+        "Examples reflect current UI"
+      ],
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-055",
+      "domain": "ecommerce",
+      "page_type": [
+        "Confirmation",
+        "Orders"
+      ],
+      "issue_title": "Weak post-action reassurance and next-step clarity",
+      "user_problem": "After completing an action, users aren't clearly told what happened or what to do next, increasing uncertainty and repeat actions.",
+      "dot_criterion": "Post-action clarity",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "Major",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Confirmation page lacks order number or clear confirmation message",
+        "Post-checkout page shows no next steps like tracking, account, or email receipt",
+        "Order complete page missing email confirmation or download receipt link",
+        "Confirmation missing guidance on when product will arrive or booking confirmed"
+      ],
+      "recommendation": "Provide clear confirmation plus next steps (what’s done, what’s next, where to track).",
+      "acceptance_criteria": [
+        "After completion, users see an explicit confirmation and clear next step guidance (e.g., track order, view booking)."
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Success confirmation message appears after action",
+        "Next steps clearly indicated",
+        "Clear path to continue journey",
+        "Confirmation includes summary of what was accomplished"
+      ],
+      "detection_type": "absence"
+    },
+    {
+      "issue_id": "UX-056",
+      "domain": "ecommerce",
+      "page_type": [
+        "Search"
+      ],
+      "issue_title": "Disabled search button forcing keyboard entry",
+      "user_problem": "Users cannot submit search by clicking button, forced to use keyboard",
+      "dot_criterion": "User control & flexibility",
+      "nielsen_heuristic": [
+        "Flexibility and efficiency of use"
+      ],
+      "severity": "High",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Search button appears disabled or grayed out until text is entered",
+        "Search magnifying glass icon button lacks click handler",
+        "Submit button missing from search form, requiring only Enter key",
+        "Search button grayed out with cursor-not-allowed appearing on hover"
+      ],
+      "recommendation": "Enable search button to function on click, support both click and Enter key",
+      "acceptance_criteria": [
+        "Search button responds to both mouse clicks and keyboard entry"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Search button functional and clickable at all times",
+        "Both button click and Enter key submit search",
+        "Search icon button has clear hover/focus state",
+        "Empty search handled gracefully"
+      ],
+      "context_notes": "Only flag if search button completely non-functional. Do not flag: Search that works via Enter key, or button that triggers on input focus. Common false positive: Styling that looks disabled but button actually works.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-057",
+      "domain": "ecommerce",
+      "page_type": [
+        "Search"
+      ],
+      "issue_title": "No spelling suggestions or error handling in search",
+      "user_problem": "Users receive no feedback when search terms are misspelled",
+      "dot_criterion": "Error prevention",
+      "nielsen_heuristic": [
+        "Error prevention"
+      ],
+      "severity": "Medium",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "No zero results message or suggestion when query returns no matches",
+        "Search missing Did you mean or autocorrect for misspelled terms",
+        "Empty search results page without related searches or trending terms",
+        "Misspelled query fails to return corrected suggestions or alternatives"
+      ],
+      "recommendation": "Implement fuzzy search and provide \"Did you mean\" suggestions for misspelled queries",
+      "acceptance_criteria": [
+        "System suggests corrections for misspelled search terms"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "'Did you mean' suggestions appear for misspelled searches",
+        "Zero results page offers corrected spelling alternatives",
+        "Similar search terms suggested",
+        "Related categories shown on no results"
+      ],
+      "context_notes": "Only flag zero-results pages with no helpful alternatives. Do not flag: Sites with small catalogs where misspelling suggestions aren't feasible. Focus on: Whether user has path forward after no results.",
+      "detection_type": "absence"
+    },
+    {
+      "issue_id": "UX-058",
+      "domain": "ecommerce",
+      "page_type": [
+        "Search",
+        "Mobile"
+      ],
+      "issue_title": "Search bar occupies excessive screen space",
+      "user_problem": "Search element takes up too much real estate, cluttering navigation",
+      "dot_criterion": "Aesthetic & minimalist design",
+      "nielsen_heuristic": [
+        "Aesthetic and minimalist design"
+      ],
+      "severity": "Low",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Search input field takes up more than 50% of header or navigation bar width",
+        "Search bar doesn't collapse or resize on mobile viewports below 480px",
+        "Search functionality not accessible via icon-only button on mobile",
+        "Search bar remains full-width even when header needs space for other elements"
+      ],
+      "recommendation": "Optimize search bar size or make it collapsible on smaller screens",
+      "acceptance_criteria": [
+        "Search bar is proportionate and does not overwhelm navigation"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Search bar proportionate to header space",
+        "Search collapses to icon on mobile",
+        "Search size balanced with other header elements",
+        "Compact search design doesn't dominate"
+      ],
+      "context_notes": "Only flag if search genuinely dominates header (>50% width) and crowds out other elements. Do not flag: Prominent but proportionate search, or search that's primary site function. Industry context: Search-heavy sites (marketplaces) may legitimately emphasize search.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-059",
+      "domain": "ecommerce",
+      "page_type": [
+        "PLP"
+      ],
+      "issue_title": "Limited filter categories without count previews",
+      "user_problem": "Users cannot see how many results each filter option will return",
+      "dot_criterion": "Visibility of status",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "Medium",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Filter options lack count in parentheses showing matching results",
+        "Price filter missing range indicator or min/max values",
+        "Category filter shows no indication of product count per category",
+        "Availability filter omits number of available vs unavailable items"
+      ],
+      "recommendation": "Show result counts next to each filter option before selection",
+      "acceptance_criteria": [
+        "Each filter displays number of matching results in parentheses"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "negative_signals": [
+        "Filter options show result counts in parentheses (e.g., 'Blue (24)')",
+        "Price filter displays min-max range of available products",
+        "Disabled filter options indicate no results or are hidden",
+        "Filter counts update dynamically as filters are applied"
+      ],
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "context_notes": "Only flag if filter counts completely absent AND would help user decision. Do not flag: Small catalogs (<50 products), filters where counts don't add value (color options), or when counts load progressively. Focus on: User benefit of count information.",
+      "detection_type": "absence"
+    },
+    {
+      "issue_id": "UX-060",
+      "domain": "ecommerce",
+      "page_type": [
+        "PLP"
+      ],
+      "issue_title": "Counterproductive sort options",
+      "user_problem": "Sort options like 'lowest rating' may reduce trust and conversion",
+      "dot_criterion": "Trust & credibility",
+      "nielsen_heuristic": [
+        "User control and freedom"
+      ],
+      "severity": "Medium",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Rare",
+      "signals_to_detect": [
+        "Sort dropdown offers Lowest Rating or Worst Reviewed option",
+        "Sort options include Most Returns or Highest Complaints",
+        "Product list sortable by negative attributes instead of positive traits",
+        "Sort menu shows options that highlight poor quality rankings"
+      ],
+      "recommendation": "Remove or reconsider sort options that highlight negative aspects",
+      "acceptance_criteria": [
+        "Sort options focus on helpful criteria (relevance, popularity, highest rated)"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Sort options focus on positive attributes",
+        "Negative sort options clearly labeled if present",
+        "Default sort is quality-focused",
+        "Options prioritize customer benefit"
+      ],
+      "context_notes": "Only flag if negative sort options are default or prominently featured. Do not flag: Presence of 'Low to High' price sort (this is useful). Flag: 'Lowest Rated', 'Most Returns', 'Worst Reviewed' sorts that highlight poor products. Context: Academic/research sites may legitimately need all sort options.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-061",
+      "domain": "ecommerce",
+      "page_type": [
+        "PLP"
+      ],
+      "issue_title": "Cannot deselect filter options once selected",
+      "user_problem": "Users cannot remove single filter selections without clearing all",
+      "dot_criterion": "User control & flexibility",
+      "nielsen_heuristic": [
+        "User control and freedom"
+      ],
+      "severity": "Medium",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Filter checkbox remains checked with no way to uncheck individually",
+        "Only Clear All button available to remove filters",
+        "Selected filter chips lack X button to remove single selections",
+        "Filter appears selected but clicking again does not deselect it"
+      ],
+      "recommendation": "Allow individual filters to be toggled off or provide \"Any\" option",
+      "acceptance_criteria": [
+        "Users can deselect any active filter individually"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "negative_signals": [
+        "Filter checkboxes can be clicked again to deselect",
+        "Selected filters shown as removable chips with X buttons",
+        "Radio filters include 'Any' or 'All' option to clear selection",
+        "Each active filter has individual remove option"
+      ],
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "context_notes": "Only flag if filters are one-way (can apply but cannot remove individually). Do not flag: Radio buttons (one selection by design), or if 'Clear All' is acceptable pattern for simple filters. Focus on: Whether user can modify selections without starting over.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-062",
+      "domain": "ecommerce",
+      "page_type": [
+        "PLP"
+      ],
+      "issue_title": "Icon-only filters without text labels",
+      "user_problem": "Users must guess what filter icons represent",
+      "dot_criterion": "Content & text clarity",
+      "nielsen_heuristic": [
+        "Recognition rather than recall"
+      ],
+      "severity": "Low",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Filter section shows only icons without accompanying text label",
+        "Price range filter lacks From / To labels on input fields",
+        "Size or color filter appears as icons only without tooltip on hover",
+        "Sorting option represented by arrow icon without descriptive text"
+      ],
+      "recommendation": "Accompany filter icons with clear text labels",
+      "acceptance_criteria": [
+        "All filter controls have visible text labels alongside icons"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Filter options include text labels alongside icons",
+        "Icon meanings follow universal conventions",
+        "Tooltips appear on hover explaining icons",
+        "Screen readers can interpret filters"
+      ],
+      "context_notes": "Only flag icon-only filters that are genuinely ambiguous. Do not flag: Universal icons (star for rating, $ for price) or when tooltips clarify. Industry context: Fashion sites may use color swatches (acceptable), technical sites need text labels.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-063",
+      "domain": "ecommerce",
+      "page_type": [
+        "Forms",
+        "Account"
+      ],
+      "issue_title": "Missing country code prefix for phone input",
+      "user_problem": "Users unclear on phone number format, especially international users",
+      "dot_criterion": "Error prevention",
+      "nielsen_heuristic": [
+        "Error prevention"
+      ],
+      "severity": "High",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Phone input field lacks placeholder showing format like +1 (555) 123-4567",
+        "No country code dropdown or prefix selector before phone number input",
+        "Phone field validation rejects international numbers without country code",
+        "Help text or example absent explaining phone format requirements"
+      ],
+      "recommendation": "Add country code selector and format example (e.g., +1 (555) 123-4567)",
+      "acceptance_criteria": [
+        "Phone input includes country code dropdown and format guidance"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Country code prefix updates automatically when country selected",
+        "Phone field includes integrated country selector",
+        "Single country selector controls both shipping and phone",
+        "Default country code matches selected country"
+      ],
+      "context_notes": "Only flag actual mismatches (selected country code doesn't match phone prefix). Do not flag: Working dynamic updates, or static fields for single-market sites. Industry context: Common in international checkouts. Focus on: Whether country and phone code are synchronized.",
+      "detection_type": "absence"
+    },
+    {
+      "issue_id": "UX-065",
+      "domain": "ecommerce",
+      "page_type": [
+        "Navigation"
+      ],
+      "issue_title": "Confusing visual similarity between menu and breadcrumbs",
+      "user_problem": "Users confuse navigation menu with breadcrumb trail due to similar appearance",
+      "dot_criterion": "Consistency",
+      "nielsen_heuristic": [
+        "Consistency and standards"
+      ],
+      "severity": "Low",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Rare",
+      "signals_to_detect": [
+        "Breadcrumbs and navigation menu use identical styling",
+        "Both breadcrumbs and menu lack visual differentiation like color or typography",
+        "Menu expandable indicators and breadcrumb separators visually indistinguishable",
+        "Hover states on breadcrumbs identical to hover states on navigation items"
+      ],
+      "recommendation": "Visually differentiate menu (arrows for expandable) from breadcrumbs (separators)",
+      "acceptance_criteria": [
+        "Menu and breadcrumbs have distinct visual treatments"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Breadcrumbs styled distinctly from navigation",
+        "Navigation menu clearly separated from breadcrumb",
+        "Breadcrumbs use separator, navigation uses buttons",
+        "Visual hierarchy makes breadcrumb secondary"
+      ],
+      "context_notes": "Only flag if breadcrumbs and navigation are genuinely confusing (same styling, position). Do not flag: Similar-ish styling if clear contextually. Focus on: Whether user can distinguish navigation from location trail.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-066",
+      "domain": "ecommerce",
+      "page_type": [
+        "Navigation",
+        "Mobile"
+      ],
+      "issue_title": "Non-responsive dropdown menu on different screen sizes",
+      "user_problem": "Dropdown menu cuts off or fails to display properly on various devices",
+      "dot_criterion": "Responsive design",
+      "nielsen_heuristic": [
+        "Flexibility and efficiency of use"
+      ],
+      "severity": "High",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Dropdown menu extends beyond mobile viewport edge causing horizontal scroll",
+        "Submenu items cut off at bottom of mobile screen without scroll option",
+        "Dropdown position doesn't adjust for viewport constraints on small screens",
+        "Touch targets in dropdown too small or positioned too close on mobile view"
+      ],
+      "recommendation": "Implement responsive dropdown that adapts to viewport size and orientation",
+      "acceptance_criteria": [
+        "Dropdown menu fully visible and functional across all screen sizes"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Dropdown menu adjusts position to stay within viewport",
+        "Mobile dropdowns use full-width or slide-out pattern",
+        "Menu scrollable if content exceeds viewport",
+        "Dropdown placement tested across devices"
+      ],
+      "context_notes": "Only flag if dropdown genuinely broken on mobile (cuts off, not scrollable, unusable). Do not flag: Different mobile pattern (slide-out, accordion) that's functional. Test on: Actual mobile viewports 375px-428px width, various devices.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-067",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global"
+      ],
+      "issue_title": "Missing breadcrumbs for navigation",
+      "user_problem": "Users cannot easily track their location or navigate back through hierarchy",
+      "dot_criterion": "Navigation & discoverability",
+      "nielsen_heuristic": [
+        "User control and freedom"
+      ],
+      "severity": "Medium",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "No breadcrumbs visible on category or product detail pages",
+        "Breadcrumbs present only on some pages but not others",
+        "Breadcrumb links non-clickable or inactive for navigation",
+        "Multi-level page hierarchy lacks breadcrumb trail showing path"
+      ],
+      "recommendation": "Implement breadcrumb navigation on all pages beyond homepage",
+      "acceptance_criteria": [
+        "Breadcrumbs present showing full navigation path with clickable links"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "negative_signals": [
+        "Breadcrumb navigation visible on all pages beyond homepage",
+        "Breadcrumbs show full path (Home > Category > Product)",
+        "Each breadcrumb level is clickable",
+        "Breadcrumbs differentiated from main navigation"
+      ],
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "context_notes": "Only flag if breadcrumbs completely absent on deep category/product pages. Do not flag: Homepage or single-level pages. Industry context: Simple sites (single category) may not need breadcrumbs. Focus on: Whether user can navigate back through hierarchy.",
+      "detection_type": "absence"
+    },
+    {
+      "issue_id": "UX-068",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global"
+      ],
+      "issue_title": "Inconsistent icon styles (outlined vs filled)",
+      "user_problem": "Mixed icon styles create visual inconsistency and confusion",
+      "dot_criterion": "Consistency",
+      "nielsen_heuristic": [
+        "Consistency and standards"
+      ],
+      "severity": "Low",
+      "evidence_type": "Heuristic",
+      "ecommerce_relevance": "Low",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Some icons in navigation are outlined, others are solid filled",
+        "Shopping cart, favorites, and profile use different styles",
+        "Top navigation icons differ in style from footer navigation icons",
+        "Mixed icon stroke weight and fill patterns throughout interface"
+      ],
+      "recommendation": "Standardize icon library to use consistent style throughout interface",
+      "acceptance_criteria": [
+        "All icons follow same visual style (all outlined or all filled)"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "All icons consistently use same style",
+        "Icon family consistent across site",
+        "Mixing styles intentional for emphasis",
+        "Style consistency extends to weight and corners"
+      ],
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-069",
+      "domain": "ecommerce",
+      "page_type": [
+        "Navigation"
+      ],
+      "issue_title": "Ambiguous icon meaning",
+      "user_problem": "Users cannot immediately understand what certain icons represent",
+      "dot_criterion": "Content & text clarity",
+      "nielsen_heuristic": [
+        "Recognition rather than recall"
+      ],
+      "severity": "Medium",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Navigation icon lacks accompanying text label or tooltip",
+        "Custom or non-standard icons without clear meaning",
+        "Action button uses icon that doesn't match user expectations",
+        "Feature represented by icon with no hover explanation"
+      ],
+      "recommendation": "Use standard icons or add labels/tooltips to clarify meaning",
+      "acceptance_criteria": [
+        "All icons have clear, recognizable meaning or explanatory text"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Icons paired with text labels for clarity",
+        "Icons follow common conventions",
+        "Tooltips available on hover for icon-only buttons",
+        "Important actions use recognized icons"
+      ],
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-070",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global"
+      ],
+      "issue_title": "Low visibility of favorite/bookmark icons",
+      "user_problem": "Users miss opportunity to save items due to faint or hard-to-see icons",
+      "dot_criterion": "Visibility",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "Low",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Wishlist icon very small or light gray blending with background",
+        "Favorite button appears only on hover, not visible by default",
+        "Bookmark icon uses very low contrast color",
+        "Save icon lacks visual prominence compared to primary CTAs"
+      ],
+      "recommendation": "Increase icon size, contrast, or prominence for wishlist/favorite features",
+      "acceptance_criteria": [
+        "Favorite icons clearly visible without compromising visual hierarchy"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Favorites icon prominently visible in header",
+        "Icon includes count badge showing items",
+        "Filled heart indicates items saved",
+        "Wishlist accessible within one click"
+      ],
+      "detection_type": "absence"
+    },
+    {
+      "issue_id": "UX-071",
+      "domain": "ecommerce",
+      "page_type": [
+        "Content"
+      ],
+      "issue_title": "Spelling and grammar errors in content",
+      "user_problem": "Errors damage credibility and professionalism of brand",
+      "dot_criterion": "Trust & credibility",
+      "nielsen_heuristic": [
+        "Aesthetic and minimalist design"
+      ],
+      "severity": "Medium",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Product descriptions or marketing copy contains obvious misspellings",
+        "Grammar errors like missing articles or incorrect verb tenses visible",
+        "Punctuation errors such as missing periods or misplaced commas in content",
+        "Repeated typos or autocorrect failures in product titles or descriptions"
+      ],
+      "recommendation": "Conduct thorough content review and implement quality assurance process",
+      "acceptance_criteria": [
+        "All visible text is free of spelling and grammatical errors"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Content reviewed for spelling and grammar",
+        "Professional tone maintained",
+        "No obvious typos in critical content",
+        "Product descriptions clearly written"
+      ],
+      "context_notes": "Only flag obvious, disruptive spelling errors in critical content (CTAs, headings, product names). Do not flag: Minor typos in long-form content or user-generated content. Focus on: Errors that damage credibility or clarity.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-072",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global"
+      ],
+      "issue_title": "Empty content sections without messaging",
+      "user_problem": "Page sections with no content appear broken or still loading",
+      "dot_criterion": "Visibility of status",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "High",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Featured products section shows empty space with no placeholder",
+        "Recommendations carousel appears blank without No items message",
+        "Account section shows empty boxes where benefits should display",
+        "Related items section visible but contains no content or message"
+      ],
+      "recommendation": "Display empty state messages or placeholders for sections without content",
+      "acceptance_criteria": [
+        "Empty sections show appropriate messaging or hide completely"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Empty sections show helpful message",
+        "Empty states include icon and text",
+        "Sections with no content removed from layout",
+        "Alternative content suggested when empty"
+      ],
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-073",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global"
+      ],
+      "issue_title": "Entire pages blank without empty state design",
+      "user_problem": "Empty pages (notifications, search results, cart) show nothing, appearing broken",
+      "dot_criterion": "Visibility of status",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "Medium",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Empty cart shows completely blank page with no message",
+        "No search results page shows blank screen instead of empty state",
+        "Notifications page appears empty without Try searching or Browse items message",
+        "Account orders section blank when no orders exist"
+      ],
+      "recommendation": "Design empty states with helpful messaging and clear next actions",
+      "acceptance_criteria": [
+        "All potentially empty pages have designed empty states"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Empty states include helpful illustration and message",
+        "Clear CTA on empty pages",
+        "Empty pages explain why nothing shown",
+        "Navigation to relevant content provided"
+      ],
+      "detection_type": "absence"
+    },
+    {
+      "issue_id": "UX-074",
+      "domain": "ecommerce",
+      "page_type": [
+        "Account"
+      ],
+      "issue_title": "UI state not updating after account creation",
+      "user_problem": "Users unsure if registration succeeded due to stale UI state",
+      "dot_criterion": "Visibility of status",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "High",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Rare",
+      "signals_to_detect": [
+        "Header shows Login button after successful signup",
+        "Account menu or user name does not update after registration",
+        "Navigation still displays Create Account option after login",
+        "User profile icon or personalized greeting absent post-signup"
+      ],
+      "recommendation": "Ensure UI immediately reflects authentication state changes",
+      "acceptance_criteria": [
+        "Navigation updates to show logged-in state immediately after signup"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "UI updates immediately when state changes",
+        "Real-time feedback shows action completed",
+        "Visual indicators reflect current state",
+        "Animations show state changes smoothly"
+      ],
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-075",
+      "domain": "ecommerce",
+      "page_type": [
+        "Cart"
+      ],
+      "issue_title": "No visual confirmation when item added to cart",
+      "user_problem": "Users uncertain whether add-to-cart action succeeded",
+      "dot_criterion": "Visibility of status",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "Medium",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Add-to-cart button lacks success state or loading indicator when clicked",
+        "No toast notification appears confirming item added to cart",
+        "Cart icon badge count doesn't update or show animation after add",
+        "No minicart preview or slide-out drawer showing added item"
+      ],
+      "recommendation": "Show badge count update or toast notification when items added",
+      "acceptance_criteria": [
+        "Cart icon displays updated count or confirmation appears"
+      ],
+      "requires_checkout": false,
+      "requires_cart": true,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "negative_signals": [
+        "Toast notification appears when item added",
+        "Cart icon shows updated count with animation",
+        "Mini cart preview shows added item",
+        "Add to Cart button shows success state (checkmark, 'Added!')"
+      ],
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "context_notes": "Only flag if NO feedback after add-to-cart. Do not flag: Subtle confirmation (cart count update, button state change). Focus on: Whether user knows action succeeded. Industry context: Minimal design may use subtle indicators; flag only complete absence.",
+      "detection_type": "absence"
+    },
+    {
+      "issue_id": "UX-076",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global"
+      ],
+      "issue_title": "Technical status labels unclear to users",
+      "user_problem": "System-facing language confuses non-technical users",
+      "dot_criterion": "Content & text clarity",
+      "nielsen_heuristic": [
+        "Match between system and real world"
+      ],
+      "severity": "Medium",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Order status shows technical terms like 'fulfilling' or 'processing' instead of user-friendly labels",
+        "Error message contains system error codes or technical jargon",
+        "Status indicator uses abbreviations like 'INVC' or 'PRCS' without explanation",
+        "Sidebar or status section shows database or API terminology instead of plain language"
+      ],
+      "recommendation": "Use plain language status labels that match user mental models",
+      "acceptance_criteria": [
+        "All status indicators use user-friendly, clear language"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Status labels use plain language",
+        "Technical codes translated to user-friendly terms",
+        "Status meanings clear without help",
+        "Progress indicators show order status visually"
+      ],
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-077",
+      "domain": "ecommerce",
+      "page_type": [
+        "Orders",
+        "Account"
+      ],
+      "issue_title": "Contradictory inactive CTAs for completed actions",
+      "user_problem": "Disabled buttons for already-completed actions create confusion",
+      "dot_criterion": "Consistency",
+      "nielsen_heuristic": [
+        "Consistency and standards"
+      ],
+      "severity": "Medium",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Delivered order shows grayed-out Cancel button without explanation",
+        "Completed booking displays disabled Modify button instead of hiding it",
+        "Processed refund shows faded Request Refund button still present on order",
+        "Cancelled appointment has disabled Reschedule button instead of Remove"
+      ],
+      "recommendation": "Hide or remove action buttons that no longer apply to current state",
+      "acceptance_criteria": [
+        "Completed orders show only relevant actions (view, reorder, not cancel)"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Completed actions use positive styling",
+        "Inactive CTAs for completed actions hidden",
+        "Clear indication of what's accomplished",
+        "Next steps shown instead of redundant buttons"
+      ],
+      "context_notes": "Only flag if disabled button for completed action is confusing. Do not flag: Clear success messaging even if button remains. Focus on: Whether user understands action is complete.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-078",
+      "domain": "ecommerce",
+      "page_type": [
+        "Mobile"
+      ],
+      "issue_title": "Non-responsive mobile layout and sizing",
+      "user_problem": "Elements shift, overlap, or become unusable on mobile devices",
+      "dot_criterion": "Responsive design",
+      "nielsen_heuristic": [
+        "Flexibility and efficiency of use"
+      ],
+      "severity": "High",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "Content overflows horizontally requiring pinch-zoom on mobile viewport",
+        "Text or buttons overlap or become illegible on phones under 375px wide",
+        "Images scale incorrectly causing distortion or leaving whitespace on mobile",
+        "Navigation or product cards stack incorrectly causing layout breaks"
+      ],
+      "recommendation": "Implement proper responsive design with mobile-first approach",
+      "acceptance_criteria": [
+        "All elements properly sized and positioned on mobile viewports"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Layout adapts smoothly to different screen widths",
+        "Content stacks appropriately on mobile",
+        "Touch targets sized appropriately",
+        "Text readable without zooming"
+      ],
+      "context_notes": "Only flag critical layout breaks (horizontal scroll required, text unreadable, overlapping content). Do not flag: Intentional differences in mobile layout, elements that adapt differently but function correctly. Test on: Multiple viewport sizes 320px-768px.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-079",
+      "domain": "ecommerce",
+      "page_type": [
+        "Mobile",
+        "Navigation"
+      ],
+      "issue_title": "Mobile menu fails to expand",
+      "user_problem": "Users cannot access navigation menu on mobile devices",
+      "dot_criterion": "Navigation & discoverability",
+      "nielsen_heuristic": [
+        "User control and freedom"
+      ],
+      "severity": "High",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Hamburger menu icon present but not clickable or functional",
+        "Menu toggles briefly then collapses without showing navigation items",
+        "Mobile menu button has no touch feedback or click event handler",
+        "Navigation menu hidden behind fixed header making items inaccessible"
+      ],
+      "recommendation": "Fix mobile menu functionality and ensure touch targets are adequate",
+      "acceptance_criteria": [
+        "Mobile menu opens reliably and displays all navigation options"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Mobile menu toggle functional and responsive",
+        "Menu opens smoothly with clear animation",
+        "Touch target for menu button large enough",
+        "Menu accessible within one tap"
+      ],
+      "context_notes": "Only flag if mobile menu completely non-functional. Do not flag: Different menu pattern on mobile (if functional), delayed loading, or alternative navigation present. Test on: Touch devices, not browser resize.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-080",
+      "domain": "ecommerce",
+      "page_type": [
+        "Content"
+      ],
+      "issue_title": "Inconsistent tone of voice (dialect vs formal)",
+      "user_problem": "Mixed formality levels in content confuse users",
+      "dot_criterion": "Content & text clarity",
+      "nielsen_heuristic": [
+        "Consistency and standards"
+      ],
+      "severity": "Low",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Low",
+      "pattern_frequency": "Rare",
+      "signals_to_detect": [
+        "FAQs use conversational 'hey' tone while product descriptions use formal 'hereby'",
+        "Navigation uses casual slang 'check out' while checkout uses formal 'proceed'",
+        "Help content mixes contractions with full formal sentences inconsistently",
+        "Some pages use 'you' directly while others use passive or third-person language"
+      ],
+      "recommendation": "Establish and enforce consistent voice and tone guidelines",
+      "acceptance_criteria": [
+        "All content follows single consistent tone (either formal or conversational)"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Consistent tone throughout",
+        "Same dialect used across all content",
+        "Voice matches brand consistently",
+        "Copy style guide followed"
+      ],
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-081",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global"
+      ],
+      "issue_title": "Mixed language content (untranslated elements)",
+      "user_problem": "Users encounter content in unexpected languages, breaking experience",
+      "dot_criterion": "Consistency",
+      "nielsen_heuristic": [
+        "Consistency and standards"
+      ],
+      "severity": "Low",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Navigation menus show mix of English and other language strings",
+        "Help or support links display in different language than selected interface language",
+        "Form labels translated but placeholder text or error messages remain in original language",
+        "Footer or terms links show untranslated text on French or Spanish selected view"
+      ],
+      "recommendation": "Complete translation of all interface elements to selected language",
+      "acceptance_criteria": [
+        "No untranslated text appears when language is selected"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "All visible content in selected language",
+        "No untranslated UI elements or labels",
+        "Complete translation includes navigation and buttons",
+        "Mixed language only in proper nouns"
+      ],
+      "context_notes": "Only flag if UI elements (buttons, navigation, labels) are untranslated. Do not flag: Product names, brand names, or proper nouns in original language. Industry context: Technical terms may remain in English even in translated sites. Focus on: Interface language consistency.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-083",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global"
+      ],
+      "issue_title": "No confirmation for language selection",
+      "user_problem": "Users uncertain if language change took effect",
+      "dot_criterion": "Visibility of status",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "Medium",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Rare",
+      "signals_to_detect": [
+        "Language dropdown closes without page refresh or notification",
+        "No toast or confirmation message shown after language selection",
+        "Page doesn't update immediately with changed language",
+        "Language selector has no submit button or confirmation required"
+      ],
+      "recommendation": "Add confirmation step or immediate visual feedback for language changes",
+      "acceptance_criteria": [
+        "Language selection provides clear confirmation before or immediately after change"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Language change confirmation message appears",
+        "Page refreshes to show selected language",
+        "Visual indicator shows active language",
+        "Success message confirms selection"
+      ],
+      "context_notes": "Only flag if language change provides no feedback (no page reload, no confirmation). Do not flag: Obvious page refresh or language name update in selector. Focus on: Whether user knows change took effect.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-084",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global"
+      ],
+      "issue_title": "Language selector not functioning",
+      "user_problem": "Users cannot change site language despite selector being present",
+      "dot_criterion": "User control & flexibility",
+      "nielsen_heuristic": [
+        "User control and freedom"
+      ],
+      "severity": "High",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Rare",
+      "signals_to_detect": [
+        "Language selector dropdown disabled or non-interactive",
+        "Selecting different language doesn't update page content",
+        "Language toggle button unresponsive to clicks or touches",
+        "Language preference doesn't persist across page navigation"
+      ],
+      "recommendation": "Fix language switching functionality and test across all pages",
+      "acceptance_criteria": [
+        "Language selector successfully changes interface language"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Language selector dropdown functional",
+        "Language options load and display correctly",
+        "Selected language applied immediately",
+        "No errors preventing language change"
+      ],
+      "context_notes": "Only flag if language selector completely broken. Do not flag: Slow loading, different-than-expected behavior (opens new page vs. in-place). Focus on: Whether language can be changed at all.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-085",
+      "domain": "ecommerce",
+      "page_type": [
+        "Content",
+        "PDP"
+      ],
+      "issue_title": "Small clickable area for video play button",
+      "user_problem": "Users struggle to activate video playback due to tiny hit target",
+      "dot_criterion": "Touch target size",
+      "nielsen_heuristic": [
+        "User control and freedom"
+      ],
+      "severity": "Medium",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Video play icon button smaller than 30x30 pixels",
+        "Video thumbnail has no clickable region beyond center play icon",
+        "Play button lacks adequate padding or hover state expansion",
+        "Touch target for play action below 44x44 pixel minimum on mobile"
+      ],
+      "recommendation": "Expand clickable area for video controls to at least 44x44px",
+      "acceptance_criteria": [
+        "Video can be played by clicking anywhere on thumbnail or oversized button"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Video play button minimum 48x48px clickable area",
+        "Play button easily tappable on touch devices",
+        "Video controls have adequate spacing",
+        "Alternative text indicates video content"
+      ],
+      "context_notes": "Only flag if video play button genuinely tiny (<40px clickable area). Do not flag: Standard player controls, or when entire video is clickable. Focus on: Whether user can easily initiate playback.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-086",
+      "domain": "ecommerce",
+      "page_type": [
+        "Account"
+      ],
+      "issue_title": "Unclear purpose of account features",
+      "user_problem": "Users confused by unexplained features like credits or points",
+      "dot_criterion": "Content & text clarity",
+      "nielsen_heuristic": [
+        "Help users recognize",
+        "diagnose",
+        "and recover from errors"
+      ],
+      "severity": "Medium",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Rare",
+      "signals_to_detect": [
+        "Account loyalty points or credits section lacks explanation of purpose",
+        "Feature icon or label uses jargon like 'Rewards Equilibrium' without definition",
+        "Settings section shows options without hover tooltips explaining what they do",
+        "Account benefit sections missing info icons or help links for clarity"
+      ],
+      "recommendation": "Add explanatory text or help tooltips for account features",
+      "acceptance_criteria": [
+        "Every account feature has clear description of purpose and usage"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Account features explained with brief descriptions",
+        "Icons or labels clarify what each section contains",
+        "Onboarding or tooltips guide users",
+        "Feature benefits clearly communicated"
+      ],
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-087",
+      "domain": "ecommerce",
+      "page_type": [
+        "Booking"
+      ],
+      "issue_title": "Misleading CTA leads to wrong flow",
+      "user_problem": "CTA labeled \"Book\" takes users to search instead of booking flow",
+      "dot_criterion": "Content & text clarity",
+      "nielsen_heuristic": [
+        "Match between system and real world"
+      ],
+      "severity": "High",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Rare",
+      "signals_to_detect": [
+        "Primary CTA says 'Book Now' but href or onclick points to search page",
+        "Button labeled 'Complete Booking' instead navigates to cart or checkout",
+        "Booking link text contradicts actual destination in navigation structure",
+        "CTA tooltip or help text differs from where button actually navigates to"
+      ],
+      "recommendation": "Ensure CTA labels accurately describe destination or action",
+      "acceptance_criteria": [
+        "CTAs lead to expected destinations matching their labels"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "CTA labels accurately describe destination or action",
+        "Button text matches resulting page",
+        "No misleading promises",
+        "Action preview shown before execution"
+      ],
+      "context_notes": "Only flag genuinely misleading CTAs (promises something, delivers different). Do not flag: Minor wording differences between button and page. Industry context: Marketing CTAs vs. exact page titles differ slightly. Focus on: Actual deception.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-089",
+      "domain": "ecommerce",
+      "page_type": [
+        "Performance",
+        "PLP"
+      ],
+      "issue_title": "Excessive loading time (4+ seconds)",
+      "user_problem": "Users may abandon site due to slow page load times",
+      "dot_criterion": "Performance",
+      "nielsen_heuristic": [
+        "Aesthetic and minimalist design"
+      ],
+      "severity": "Medium",
+      "evidence_type": "Analytics",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Page displays blank or skeleton state for over 3 seconds on load",
+        "Primary content not visible until 4+ seconds after initial navigation",
+        "Large unoptimized images causing network delay on product listing page",
+        "No lazy loading implemented, all images load immediately blocking interaction"
+      ],
+      "recommendation": "Optimize assets, implement lazy loading, and reduce server response time",
+      "acceptance_criteria": [
+        "Page loads in under 3 seconds on standard connection"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Page loads to usable state within 3-4 seconds",
+        "Critical content appears quickly",
+        "Loading progress indicated",
+        "Performance optimized for connections"
+      ],
+      "context_notes": "Only flag if page takes >6 seconds to usable state on typical connections. Do not flag: Progressive loading where content appears quickly. Industry context: Heavy content sites (photography) may load slower appropriately. Focus on: Perceived performance.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-090",
+      "domain": "ecommerce",
+      "page_type": [
+        "Performance",
+        "Technical"
+      ],
+      "issue_title": "Map component failing to load",
+      "user_problem": "Users cannot view location information when map fails",
+      "dot_criterion": "Error prevention",
+      "nielsen_heuristic": [
+        "Error prevention"
+      ],
+      "severity": "High",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Rare",
+      "signals_to_detect": [
+        "Map iframe or embed shows 403/404 error or blank space",
+        "Google Maps or map library fails to initialize with API error",
+        "Map container visible but displays only gray tiles without content",
+        "Location information missing fallback when map fails to load"
+      ],
+      "recommendation": "Fix map integration and add fallback for failures (static image or address)",
+      "acceptance_criteria": [
+        "Map loads reliably or fallback content displays"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Map loads and displays correctly",
+        "Error message shown if map fails with alternative",
+        "Address text provided alongside map",
+        "Map interactive with working controls"
+      ],
+      "context_notes": "Only flag if map completely fails AND no alternative provided. Do not flag: Maps that load slowly, or alternative (address text) present. Focus on: Whether user can get location information by any means.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-091",
+      "domain": "ecommerce",
+      "page_type": [
+        "PLP"
+      ],
+      "issue_title": "Results display glitch (temporary visibility)",
+      "user_problem": "Filtered results appear briefly then revert to full list",
+      "dot_criterion": "System reliability",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "High",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Rare",
+      "signals_to_detect": [
+        "Product list shows filtered items then reverts to full list within 2 seconds",
+        "Filter checkbox appears checked then unchecks automatically",
+        "Result count updates briefly to filtered number then resets to total",
+        "URL reflects filter but page display shows all products"
+      ],
+      "recommendation": "Debug and fix state management for filter application",
+      "acceptance_criteria": [
+        "Filter results remain stable and do not revert"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Filter results remain stable after applied",
+        "No flickering or content reloading",
+        "Results update once and stay updated",
+        "Loading state shown during application"
+      ],
+      "context_notes": "Only flag if filter results flicker or reload multiple times. Do not flag: Single loading state during filter application. Focus on: Whether results are stable after filtering.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-092",
+      "domain": "ecommerce",
+      "page_type": [
+        "Navigation"
+      ],
+      "issue_title": "Cluttered dropdown with poor information scent",
+      "user_problem": "Navigation menu has too many items (7+) without clear grouping",
+      "dot_criterion": "Information hierarchy",
+      "nielsen_heuristic": [
+        "Recognition rather than recall"
+      ],
+      "severity": "Medium",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Navigation menu displays more than 7 top-level items without grouping",
+        "Dropdown lacks visual dividers or section headers to organize categories",
+        "Menu items use inconsistent naming or appear in random order",
+        "Navigation lacks mega menu structure or category grouping for clarity"
+      ],
+      "recommendation": "Group related items, use mega menu, or reduce to 5-7 top-level items",
+      "acceptance_criteria": [
+        "Menu items grouped logically with clear visual hierarchy"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Dropdown menu limited to 5-7 main items",
+        "Categories grouped with visual separators",
+        "Mega menu uses columns for organization",
+        "Long lists use progressive disclosure"
+      ],
+      "context_notes": "Only flag if dropdown/menu is genuinely overwhelming (10+ items, no grouping). Do not flag: Well-organized mega menus, or 5-7 clear categories. Focus on: Cognitive load and clarity.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-093",
+      "domain": "ecommerce",
+      "page_type": [
+        "Accessibility"
+      ],
+      "issue_title": "Missing video transcriptions or captions",
+      "user_problem": "Deaf/hard-of-hearing users cannot access video content",
+      "dot_criterion": "Accessibility",
+      "nielsen_heuristic": [
+        "Flexibility and efficiency of use"
+      ],
+      "severity": "Major",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Video player lacks captions or subtitles option in controls",
+        "No transcript link or download available for video content",
+        "Video iframe missing title or description of audio content",
+        "Closed captions button absent from video player interface"
+      ],
+      "recommendation": "Add captions/transcripts for all video content",
+      "acceptance_criteria": [
+        "All videos have accurate captions or transcripts available"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Videos include caption toggle button",
+        "Transcripts provided below or linked",
+        "Auto-generated captions available at minimum",
+        "Deaf users can access video content"
+      ],
+      "context_notes": "Only flag video content with no text alternative. Do not flag: Decorative videos, videos with auto-captions. Industry context: Accessibility requirement for informational video. Focus on: Whether deaf users can access information.",
+      "detection_type": "absence"
+    },
+    {
+      "issue_id": "UX-094",
+      "domain": "ecommerce",
+      "page_type": [
+        "PLP"
+      ],
+      "issue_title": "Active filters not displayed at top",
+      "user_problem": "Users forget which filters are applied and cannot easily review them",
+      "dot_criterion": "Visibility of status",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "Medium",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Repeated",
+      "signals_to_detect": [
+        "No chip or tag display showing currently applied filters",
+        "Active filters visible only in sidebar, not above product results",
+        "Filter status hidden or requires scrolling to see applied criteria",
+        "Applied filters lack individual remove buttons or clear all option"
+      ],
+      "recommendation": "Display active filters as removable chips/pills above results",
+      "acceptance_criteria": [
+        "All active filters visible at top with option to remove individually"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Active filters displayed as removable chips or pills at top of results",
+        "Applied filters visible above product grid with individual X buttons",
+        "Filter summary section shows current selections clearly",
+        "Each active filter can be removed individually without clearing all"
+      ],
+      "context_notes": "Only flag if active filters completely hidden (user can't see what's applied). Do not flag: Filters shown in sidebar or clear from URL. Focus on: Whether user can identify and review current filter state. Common false positive: Filters visible but not in 'perfect' position.",
+      "detection_type": "absence"
+    },
+    {
+      "issue_id": "UX-095",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global"
+      ],
+      "issue_title": "Insufficient spacing and grouping of elements",
+      "user_problem": "Users struggle to identify which elements belong together",
+      "dot_criterion": "Visual hierarchy",
+      "nielsen_heuristic": [
+        "Aesthetic and minimalist design"
+      ],
+      "severity": "Low",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Related form fields or sections lack visual grouping or borders",
+        "Spacing between unrelated elements equals spacing between related items",
+        "Elements appear clustered together without clear visual separation",
+        "Margins and padding inconsistent across similar component groups"
+      ],
+      "recommendation": "Apply consistent spacing following proximity principle (related items closer)",
+      "acceptance_criteria": [
+        "Visual grouping clear through appropriate whitespace"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Related elements grouped with whitespace or borders",
+        "Clear spacing between distinct sections",
+        "Form fields have adequate padding",
+        "Visual rhythm through consistent spacing"
+      ],
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-096",
+      "domain": "ecommerce",
+      "page_type": [
+        "PDP",
+        "Content"
+      ],
+      "issue_title": "Primary CTA missing from bottom of long pages",
+      "user_problem": "Users must scroll back to top after reading content to take action",
+      "dot_criterion": "User control & flexibility",
+      "nielsen_heuristic": [
+        "Flexibility and efficiency of use"
+      ],
+      "severity": "Medium",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Buy button or CTA visible only at top of page requiring scrolling to find",
+        "Page longer than 2000px without sticky or repeated CTA",
+        "After-the-fold footer lacks secondary CTA for user action",
+        "Long product description without Add to Cart button at bottom"
+      ],
+      "recommendation": "Make CTA sticky or repeat at bottom of content",
+      "acceptance_criteria": [
+        "Primary CTA accessible without scrolling back up"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Primary CTA repeated at bottom of long pages",
+        "Sticky CTA appears when main scrolls out",
+        "Multiple conversion points throughout",
+        "Bottom includes clear next step"
+      ],
+      "context_notes": "Only flag long pages (>2000px) with no repeat CTA at bottom. Do not flag: Short pages, pages with sticky CTAs. Focus on: Whether user must scroll all way back up after reading content to take action.",
+      "detection_type": "absence"
+    },
+    {
+      "issue_id": "UX-097",
+      "domain": "ecommerce",
+      "page_type": [
+        "Cart"
+      ],
+      "issue_title": "Missing individual item prices in cart",
+      "user_problem": "Users cannot verify pricing of individual items in cart",
+      "dot_criterion": "Transparency",
+      "nielsen_heuristic": [
+        "Visibility of system status"
+      ],
+      "severity": "Medium",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Rare",
+      "signals_to_detect": [
+        "Cart item rows show only total without unit price breakdown",
+        "No price per item column or price multiplication display",
+        "Quantity and price visible but subtotal per item missing",
+        "Only grand total shown without itemized pricing detail"
+      ],
+      "recommendation": "Display unit price, quantity, and subtotal for each cart item",
+      "acceptance_criteria": [
+        "Each cart item shows clear pricing breakdown"
+      ],
+      "requires_checkout": false,
+      "requires_cart": true,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Each cart item shows unit price, quantity, and line total",
+        "Price breakdown visible",
+        "Individual product pricing clear",
+        "Price per item and total both displayed"
+      ],
+      "context_notes": "Only flag if price breakdown genuinely unclear (user can't verify math). Do not flag: Minimal presentation if calculation is transparent. Focus on: Whether user can understand 'quantity × unit price = line total'.",
+      "detection_type": "absence"
+    },
+    {
+      "issue_id": "UX-098",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global"
+      ],
+      "issue_title": "Inconsistent font usage across interface",
+      "user_problem": "Multiple different fonts create unprofessional appearance",
+      "dot_criterion": "Consistency",
+      "nielsen_heuristic": [
+        "Consistency and standards"
+      ],
+      "severity": "Low",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Low",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Navigation uses serif font while body uses sans-serif without hierarchy reason",
+        "More than 2 different font families visible across the page",
+        "Form labels use different font than form inputs or buttons",
+        "Price display uses entirely different font family from product titles"
+      ],
+      "recommendation": "Standardize to 1-2 fonts maximum across entire interface",
+      "acceptance_criteria": [
+        "Consistent font family used throughout with clear type hierarchy"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "Consistent font family throughout site",
+        "Font sizes follow typographic scale",
+        "No random font changes between sections",
+        "Type system documented and applied"
+      ],
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-099",
+      "domain": "ecommerce",
+      "page_type": [
+        "PLP"
+      ],
+      "issue_title": "Filter section requires extra click to show all options",
+      "user_problem": "Users must click \"Show more\" to see all available filters",
+      "dot_criterion": "User control & flexibility",
+      "nielsen_heuristic": [
+        "Flexibility and efficiency of use"
+      ],
+      "severity": "Medium",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Filter options collapsed with Show more / See all button",
+        "Filter section displays only first 3-5 options then requires expansion",
+        "Scrollable filter list with cutoff text indicating hidden options",
+        "Accordion-style filters collapsed by default requiring clicks to expand"
+      ],
+      "recommendation": "Show all filter options by default or use scrollable container",
+      "acceptance_criteria": [
+        "Users can view all filter options without additional clicks"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "All filter options visible without requiring expansion",
+        "Filter categories show all options upfront (no 'Show more' needed)",
+        "Long filter lists use scrolling within section, not collapse/expand",
+        "Critical filters (Price, Size) always fully visible without clicking"
+      ],
+      "context_notes": "Only flag if critical filters (price, size, category) are collapsed by default requiring clicks. Do not flag: Less-used filters (brand with 50+ options) in collapsed state. Focus on: Whether most-used filters require unnecessary clicks to access.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-100",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global"
+      ],
+      "issue_title": "RTL/LTR directional inconsistencies",
+      "user_problem": "Interface elements not properly mirrored for RTL languages",
+      "dot_criterion": "Localization",
+      "nielsen_heuristic": [
+        "Consistency and standards"
+      ],
+      "severity": "Medium",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "RTL language selection shows LTR layout without proper mirroring",
+        "Icons and arrows point wrong direction in RTL mode",
+        "Left sidebar appears on left in RTL instead of right",
+        "Text alignment remains left-to-right when RTL language selected"
+      ],
+      "recommendation": "Implement proper RTL support with mirrored layouts and directional icons",
+      "acceptance_criteria": [
+        "All elements properly aligned for selected text direction"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.77,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "negative_signals": [
+        "RTL layout properly mirrors LTR layout",
+        "Icons and UI elements flip appropriately",
+        "Text alignment correct for RTL",
+        "Navigation flows right-to-left consistently"
+      ],
+      "context_notes": "Only flag if RTL implementation breaks functionality or readability. Do not flag: Minor visual inconsistencies that don't hinder use. Industry context: RTL support is complex; flag critical breaks, not perfection. Test on: Actual RTL language selection.",
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-101",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global"
+      ],
+      "issue_title": "Intrusive chat widget appearing immediately",
+      "user_problem": "Users interrupted by chat prompts before assessing site",
+      "dot_criterion": "User control & freedom",
+      "nielsen_heuristic": [
+        "User control & freedom"
+      ],
+      "severity": "Moderate",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Chat widget/bubble appears within 5 seconds of page load",
+        "Chat assistant message displayed before user interaction",
+        "Chat widget overlays content without user requesting help",
+        "Proactive chat appears before user browsed products"
+      ],
+      "negative_signals": [
+        "Chat appears collapsed as icon until user clicks",
+        "Chat opens only after 30+ seconds of inactivity",
+        "Chat appears only on support/help pages"
+      ],
+      "recommendation": "Delay chat until user shows intent (30s+, 2+ pages, or exit intent)",
+      "acceptance_criteria": [
+        "Chat does not open within first 30 seconds",
+        "Remains icon-only until user initiates"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.82,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-102",
+      "domain": "ecommerce",
+      "page_type": [
+        "Checkout",
+        "Forms",
+        "Account"
+      ],
+      "issue_title": "Phone country code doesn't match selected country",
+      "user_problem": "Incorrect country code prefix doesn't match selected country",
+      "dot_criterion": "Error prevention",
+      "nielsen_heuristic": [
+        "Error prevention",
+        "Match between system and real world"
+      ],
+      "severity": "High",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "High",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Phone shows static country code regardless of country selected",
+        "Country dropdown shows one country while phone shows different code",
+        "No automatic update of phone prefix when country changes",
+        "Phone lacks country code dropdown synchronized with country field"
+      ],
+      "negative_signals": [
+        "Phone prefix updates automatically when country changes",
+        "Integrated phone input with country selector",
+        "Single selector controls both country and phone prefix"
+      ],
+      "recommendation": "Synchronize phone prefix with country dropdown",
+      "acceptance_criteria": [
+        "Phone prefix updates when country selected",
+        "Default prefix matches default country",
+        "Format example shown for selected country"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.88,
+      "context_notes": "Check country dropdown matches phone prefix. Common: UAE selected but +91 shown.",
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "detection_type": "presence"
+    },
+    {
+      "issue_id": "UX-103",
+      "domain": "ecommerce",
+      "page_type": [
+        "Global"
+      ],
+      "issue_title": "Persistent banner cannot be dismissed",
+      "user_problem": "Promotional banner permanently occupies header space",
+      "dot_criterion": "User control & freedom",
+      "nielsen_heuristic": [
+        "User control & freedom",
+        "Aesthetic and minimalist design"
+      ],
+      "severity": "Low",
+      "evidence_type": "Observation",
+      "ecommerce_relevance": "Medium",
+      "pattern_frequency": "Common",
+      "signals_to_detect": [
+        "Promotional banner visible on every page without dismiss option",
+        "Banner lacks X button or close control",
+        "Banner persists across pages without ability to hide",
+        "Banner takes 40+ pixels on all pages"
+      ],
+      "negative_signals": [
+        "Banner includes X or close button",
+        "Banner appears only on homepage",
+        "Banner auto-dismisses after interaction"
+      ],
+      "recommendation": "Add dismiss button or limit to homepage. Store preference in session.",
+      "acceptance_criteria": [
+        "Banner includes dismiss button",
+        "Dismissed state persists for session",
+        "Does not reappear after dismissal"
+      ],
+      "requires_checkout": false,
+      "requires_cart": false,
+      "visual_confirmation_required": true,
+      "confidence_weight": 0.75,
+      "confidence_penalties": {
+        "incomplete_crawl": -0.15,
+        "static_only_evidence": -0.2,
+        "uncertainty_stated": -0.25,
+        "contradictory_evidence": -0.4,
+        "single_signal_only": -0.15
+      },
+      "detection_type": "presence"
+    }
+  ]
+}

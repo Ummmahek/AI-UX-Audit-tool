@@ -4,9 +4,11 @@ import {
   buildCompanyGroundedMessages,
   buildGenericMessages,
   formatMessagesForResponses,
+  imageDetectionPass,
   loadIssueLibrary,
   simpleRetrieveIssues,
   validateIssuesWithLLM,
+  type ImageDetectedResult,
   type RetrievedIssue,
 } from "@/lib/ux";
 import { crawlKeyPaths } from "@/lib/crawl";
@@ -147,15 +149,34 @@ export async function POST(request: Request) {
         }\n---\n`;
     }
 
+    const claudeKey = process.env.CLAUDE_API_KEY;
+    const openRouterKey = process.env.OPENROUTER_API_KEY;
+
     // Evidence-aware retrieval: run after crawl so retrieval can use crawl excerpts
     let retrieved: RetrievedIssue[] = [];
     let suppressedIssues: Array<{ issue: RetrievedIssue; reason: string }> = [];
     let screenshotText = "";
+    let imageDetectedResults: ImageDetectedResult[] = [];
+
     if (useCompany) {
       try {
         const issueLibrary = await loadIssueLibrary();
         // derive any text from screenshots for negative-signal checking (reuse later for validation)
         screenshotText = await extractTextFromScreenshots(screenshots);
+
+        // Image-led detection pass (before retrieval) when screenshots are present
+        if (hasScreenshots && (claudeKey || openRouterKey)) {
+          try {
+            const apiKey = claudeKey || openRouterKey!;
+            const useClaude = Boolean(claudeKey);
+            const screenshotUrls = await Promise.all(screenshots.map(fileToDataUrl));
+            imageDetectedResults = await imageDetectionPass(screenshotUrls, issueLibrary, apiKey, useClaude);
+            console.log(`[API] imageDetectionPass returned ${imageDetectedResults.length} issues: ${imageDetectedResults.map((r) => r.issue_id).join(", ") || "(none)"}`);
+          } catch (e) {
+            console.error(`[API] imageDetectionPass failed (continuing without):`, e);
+          }
+        }
+
         retrieved = simpleRetrieveIssues(
           issueLibrary,
           url,
@@ -164,17 +185,40 @@ export async function POST(request: Request) {
           crawlContext,
           screenshotText,
           hasScreenshots,
+          imageDetectedResults.length > 0 ? imageDetectedResults : undefined,
         );
         console.log(`[API] Retrieved ${retrieved.length} issues for url: ${url}, goal: ${goal}`);
+        
+        // BUG FIX 2: Append image-detected issues not already in retrieved (bypass topK cap)
+        if (imageDetectedResults.length > 0) {
+          const retrievedIds = new Set(retrieved.map((iss) => iss.issue_id).filter(Boolean));
+          const missingImageDetected = imageDetectedResults.filter((r) => !retrievedIds.has(r.issue_id));
+          
+          if (missingImageDetected.length > 0) {
+            // Add missing image-detected issues to the end of the retrieved list
+            const byId = new Map<string, Issue>();
+            for (const issue of issueLibrary) {
+              if (issue.issue_id) byId.set(issue.issue_id, issue);
+            }
+            for (const item of missingImageDetected) {
+              const issue = byId.get(item.issue_id);
+              if (issue) {
+                (issue as any).source = "image-detection"; // Mark for BUG FIX 3
+                retrieved.push(issue);
+              }
+            }
+            console.log(`[API] Appended ${missingImageDetected.length} image-detected issues (outside topK): ${missingImageDetected.map((r) => r.issue_id).join(", ")}`);
+          }
+          
+          const forceIncluded = imageDetectedResults.map((r) => r.issue_id);
+          console.log(`[API] Force-included from image pass (all): ${forceIncluded.join(", ") || "(none)"}`);
+        }
       } catch (e) {
         // fallback: leave retrieved empty and continue
         console.error(`[API] Issue retrieval failed:`, e);
         retrieved = [];
       }
     }
-
-    const claudeKey = process.env.CLAUDE_API_KEY;
-    const openRouterKey = process.env.OPENROUTER_API_KEY;
 
     if (!claudeKey && !openRouterKey) {
       return NextResponse.json({
@@ -207,7 +251,8 @@ export async function POST(request: Request) {
           screenshotText,
           apiKey,
           useClaude,
-          screenshotImages
+          screenshotImages,
+          imageDetectedResults.length > 0 ? imageDetectedResults : undefined,
         );
         validatedIssues = validationResult.validated;
         suppressedIssues = validationResult.suppressed;
@@ -234,6 +279,8 @@ export async function POST(request: Request) {
       ? buildCompanyGroundedMessages(url, goal, validatedIssues, suppressedIssues)
       : buildGenericMessages(url, goal);
 
+    const prompt = `${formatMessagesForResponses(messages)}${crawlContext}`;
+
     const apiKey = process.env.OPENROUTER_API_KEY;
 
     if (!apiKey) {
@@ -246,8 +293,6 @@ export async function POST(request: Request) {
         note: "Set OPENROUTER_API_KEY to generate live reports.",
       });
     }
-
-    const prompt = `${formatMessagesForResponses(messages)}${crawlContext}`;
 
     let report = "";
     let usedModelName = model;
@@ -433,6 +478,16 @@ export async function POST(request: Request) {
 
     // enforce deduplication on the generated report text itself
     report = dedupeReportText(report);
+
+    // Verification: log whether image-detected IDs appeared in the final report
+    if (imageDetectedResults.length > 0) {
+      const inReport = imageDetectedResults.filter((r) => report.includes(r.issue_id)).map((r) => r.issue_id);
+      const missing = imageDetectedResults.map((r) => r.issue_id).filter((id) => !report.includes(id));
+      console.log(`[API] Image-detected IDs in final report: ${inReport.join(", ") || "(none)"}`);
+      if (missing.length > 0) {
+        console.log(`[API] Image-detected IDs missing from report: ${missing.join(", ")}`);
+      }
+    }
 
     return NextResponse.json({
       report,
