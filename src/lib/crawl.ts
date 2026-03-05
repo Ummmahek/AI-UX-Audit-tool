@@ -4,6 +4,42 @@ import net from "net";
 
 export type CrawlPageLabel = "home" | "category" | "product" | "cart" | "checkout";
 
+export type DomChecks = {
+  // Trust & security
+  has_trust_badges: boolean;
+  has_ssl_text: boolean;
+  // Navigation
+  has_breadcrumbs: boolean;
+  has_search_bar: boolean;
+  has_filter_panel: boolean;
+  // CTAs
+  has_multiple_primary_ctas: boolean;
+  primary_cta_count: number;
+  // Forms
+  has_inline_error_styles: boolean;
+  has_placeholder_only_labels: boolean;
+  form_submit_count: number;
+  // Images
+  images_missing_alt: number;
+  // Checkout / progress
+  has_progress_indicator: boolean;
+  has_guest_checkout: boolean;
+  // Pricing
+  has_price_display: boolean;
+  has_shipping_info: boolean;
+  // Accessibility basics
+  buttons_missing_text: number;
+  // Additional
+  has_disabled_cta_no_hint: boolean;
+  // Headings
+  has_h1: boolean;
+  multiple_h1: boolean;
+  skipped_heading_level: boolean;
+  // Meta
+  meta_description_length: number;
+  title_length: number;
+};
+
 export type CrawledPage = {
   label: CrawlPageLabel;
   requestedUrl: string;
@@ -12,6 +48,8 @@ export type CrawledPage = {
   blockedByBotProtection?: boolean;
   error?: string;
   excerpt?: string;
+  domChecks?: DomChecks;
+  screenshot?: string; // base64 data URL captured by Playwright
 };
 
 export type CrawlResult = {
@@ -177,7 +215,64 @@ function textSlice(input: string, maxChars: number): string {
   return `${s.slice(0, maxChars - 1)}…`;
 }
 
-function extractPageExcerpt(html: string, pageUrl: string): { excerpt: string; links: string[] } {
+export function runDomChecks(html: string, $: ReturnType<typeof cheerio.load>, pageTitle: string, metaDescription: string): DomChecks {
+  // Headings
+  const h1s = $('h1');
+  const h2s = $('h2');
+  const h3s = $('h3');
+  const firstH2Pos = h2s.length > 0 ? $('*').index(h2s.first()) : Infinity;
+  const firstH3Pos = h3s.length > 0 ? $('*').index(h3s.first()) : Infinity;
+
+  return {
+    // Trust
+    has_trust_badges: $('[class*="trust"], [class*="secure"], [class*="badge"], img[alt*="secure" i], img[alt*="verified" i]').length > 0,
+    has_ssl_text: /ssl|secure|encrypted|256-bit|mcafee|norton|trustpilot/i.test(html),
+    // Navigation
+    has_breadcrumbs: $('[class*="breadcrumb"], nav[aria-label*="breadcrumb" i], [data-testid*="breadcrumb"]').length > 0,
+    has_search_bar: $('input[type="search"], input[placeholder*="search" i], input[aria-label*="search" i]').length > 0,
+    has_filter_panel: $('[class*="filter"], [class*="facet"], [data-testid*="filter"], [aria-label*="filter" i]').length > 0,
+    // CTAs
+    primary_cta_count: $('button[class*="primary"], .btn-primary, [class*="add-to-cart"], [data-testid*="add-to-cart"]').length,
+    has_multiple_primary_ctas: $('button[class*="primary"], .btn-primary').length > 2,
+    // Forms
+    has_inline_error_styles: $('[class*="error"], [class*="invalid"], .field-error, [aria-invalid="true"]').length > 0,
+    has_placeholder_only_labels: $('input[placeholder]:not([aria-label]):not([id])').filter((_, el) => {
+      const id = $(el).attr('id');
+      return !id || $(`label[for="${id}"]`).length === 0;
+    }).length > 0,
+    form_submit_count: $('button[type="submit"], input[type="submit"]').length,
+    // Images
+    images_missing_alt: $('img').filter((_, el) => {
+      const alt = $(el).attr('alt');
+      return alt === undefined || alt === '';
+    }).length,
+    // Checkout / progress
+    has_progress_indicator: $('[class*="progress"], [class*="step-indicator"], [class*="stepper"], [role="progressbar"]').length > 0,
+    has_guest_checkout: /guest|continue without|skip.*account|checkout as guest/i.test(html),
+    // Pricing
+    has_price_display: $('[class*="price"], [class*="cost"], [itemprop="price"], [data-testid*="price"]').length > 0,
+    has_shipping_info: /free.*ship|shipping.*free|free delivery|free.*deliver/i.test(html),
+    // Accessibility
+    buttons_missing_text: $('button').filter((_, el) => {
+      return !$(el).text().trim() && !$(el).attr('aria-label') && !$(el).attr('title');
+    }).length,
+    // additional disabled CTA rule
+    has_disabled_cta_no_hint:
+      $('button[disabled], button[aria-disabled="true"]').filter((_, el) => {
+        const parent = $(el).closest('form, [class*="form"]');
+        return parent.find('[class*="error"], [class*="hint"], [class*="helper"]').length === 0;
+      }).length > 0,
+    // Headings
+    has_h1: h1s.length > 0,
+    multiple_h1: h1s.length > 1,
+    skipped_heading_level: h2s.length === 0 && h3s.length > 0,
+    // Meta
+    meta_description_length: (metaDescription ?? '').length,
+    title_length: (pageTitle ?? '').length,
+  };
+}
+
+function extractPageExcerpt(html: string, pageUrl: string): { excerpt: string; links: string[]; domChecks: DomChecks } {
   const $ = cheerio.load(html);
   $("script,style,noscript").remove();
 
@@ -249,7 +344,9 @@ function extractPageExcerpt(html: string, pageUrl: string): { excerpt: string; l
     bodySnippet ? `Visible text (snippet): ${bodySnippet}` : "",
   ].filter(Boolean);
 
-  return { excerpt: excerptLines.join("\n"), links };
+  const domChecks = runDomChecks(html, $, title, metaDescription);
+
+  return { excerpt: excerptLines.join("\n"), links, domChecks };
 }
 
 function pickBestLink(links: string[], patterns: RegExp[]): string | null {
@@ -310,6 +407,7 @@ export async function crawlKeyPaths(target: string): Promise<CrawlResult> {
     if (fetched.blockedByBotProtection) blockedOrLimited = true;
     const extracted = extractPageExcerpt(fetched.html, fetched.finalUrl);
     home.excerpt = extracted.excerpt;
+    home.domChecks = extracted.domChecks;
     homeLinks = extracted.links;
   } catch (e) {
     blockedOrLimited = true;
@@ -359,10 +457,10 @@ export async function crawlKeyPaths(target: string): Promise<CrawlResult> {
   ].filter((x) => Boolean(x.url)) as Array<{ label: CrawlPageLabel; url: string }>;
 
   for (const item of chosen.slice(0, MAX_PAGES - 1)) {
-    const page: CrawledPage = { label: item.label, requestedUrl: item.url };
+    const page: CrawledPage = { label: item.label, requestedUrl: item.url ?? "" };
     pages.push(page);
     try {
-      const u = new URL(item.url);
+      const u = new URL(item.url ?? "");
       // Same-host enforced for safety (also blocks redirect-based SSRF inside fetchHtmlSafe)
       if (u.hostname !== targetUrl.hostname) {
         page.error = "Cross-host link skipped (safety)";
@@ -376,6 +474,7 @@ export async function crawlKeyPaths(target: string): Promise<CrawlResult> {
       if (fetched.blockedByBotProtection) blockedOrLimited = true;
       const extracted = extractPageExcerpt(fetched.html, fetched.finalUrl);
       page.excerpt = extracted.excerpt;
+      page.domChecks = extracted.domChecks;
     } catch (e) {
       blockedOrLimited = true;
       page.error = e instanceof Error ? e.message : "Unknown crawl error";

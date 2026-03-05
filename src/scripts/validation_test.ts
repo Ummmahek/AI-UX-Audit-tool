@@ -1,5 +1,4 @@
-// use require to avoid ESM resolution issues
-const { Issue } = require('../lib/ux');
+import { type Issue } from '../lib/ux';
 
 // replicate relevant part of validateIssuesWithLLM to test overrides
 function runValidationTest(issues: Issue[], validations: any[], crawlExcerpts: string, screenshotText: string) {
@@ -47,7 +46,7 @@ function runValidationTest(issues: Issue[], validations: any[], crawlExcerpts: s
       const patterns: RegExp[] = weakPatternsByIssue[id] || [];
       let treatAsWeak = false;
       if (patterns.length > 0) {
-        treatAsWeak = negs.every((n) => patterns.some((p) => p.test(n)));
+        treatAsWeak = negs.every((n: string) => patterns.some((p) => p.test(n)));
       }
       if (issue.issue_id === 'UX-036' && screenshotText.toLowerCase().includes('create and link')) {
         treatAsWeak = true;

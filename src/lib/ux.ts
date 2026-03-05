@@ -23,10 +23,11 @@ export type ImageDetectedResult = {
   issue_id: string;
   evidence_summary: string;
   screenshot_index: number;
+  confidence?: number; // optional value used for dedup prioritization
 };
 
 /** Default library file (under src/data). Replace this or set UX_ISSUE_LIBRARY env to use another file. */
-const DEFAULT_LIBRARY_FILE = "ux_issue_library_ecommerce_v3.5_REFINED.json";
+const DEFAULT_LIBRARY_FILE = "ux_issue_library_v4.3_COMPLETE.json";
 
 function getIssueLibraryPath(): string {
   const envPath = process.env.UX_ISSUE_LIBRARY;
@@ -481,36 +482,47 @@ export async function imageDetectionPass(
   issueLibrary: Issue[],
   apiKey: string,
   useClaude: boolean,
+  auditGoal?: string,
 ): Promise<ImageDetectedResult[]> {
   if (screenshotDataUrls.length === 0 || issueLibrary.length === 0) {
     return [];
   }
 
   const compactLib = buildCompactLibrarySummary(issueLibrary);
-  const instruction = `You are a UX analyst. Review the provided screenshots carefully.
-For each issue in the library below, determine if there is clear visual evidence in any screenshot that this issue is present (for presence issues) or that the element is missing (for absence issues). Only include issues where you have clear visual confidence.
+  const goalPrefix = auditGoal
+    ? `The user's audit goal is: "${auditGoal}".\nPrioritise identifying visual issues relevant to this goal.\nYou are reviewing ${screenshotDataUrls.length} screenshot(s) of a website.\n\n`
+    : '';
 
-CONFIDENCE DEFINITIONS (STRICT):
-- "high" = you can clearly see the issue or missing element directly in the screenshot with no ambiguity.
-- "medium" = you can see a strong indirect signal — for example, a form field implying missing validation, or a sort dropdown with a placeholder default. Do NOT use medium for issues inferred from general page structure, brand conventions, or anything not visible in the screenshot area.
+  const instruction = `${goalPrefix}You are a visual UX reviewer. Your ONLY job is to identify issues that require looking at the screenshots — things that cannot be detected from HTML or DOM inspection alone.
 
-CRITICAL FILTERING RULES:
-1. If the evidence is not clearly visible in the screenshot, omit the issue entirely. When in doubt, omit.
-2. Before returning an issue, ask yourself: Can I point to a specific pixel area in the screenshot that shows this problem? If not, omit it.
-3. Do not flag issues where the element exists but is suboptimal. Only flag where the element is clearly broken or completely absent.
+ONLY flag issues from the provided list if you can point to a specific visual element in the screenshots as evidence.
 
-Return ONLY a JSON array. No explanation. No markdown. Format:
-[
-  {
-    "issue_id": "string",
-    "screenshot_index": number,
-    "confidence": "high" | "medium",
-    "evidence_summary": "string (max 20 words)"
-  }
-]
+YOU MUST NOT flag:
+- Missing elements (buttons, labels, fields) — these are checked programmatically
+- Form structure issues — checked programmatically  
+- Navigation elements (breadcrumbs, progress bars) — checked programmatically
+- Trust badges or security text — checked programmatically
+- Any issue where the evidence is "I don't see X" — absence detection is not your job
 
-Only return issues where confidence is medium or high.
-Do not return every issue — only ones with real visual evidence.`;
+YOU SHOULD flag:
+- Poor text/background contrast that makes text hard to read
+- Images that are blurry, low quality, or fail to show product detail
+- Typography inconsistencies (mixed fonts, inconsistent sizing, poor hierarchy)
+- Visual clutter or unclear information hierarchy
+- Icons or buttons that are ambiguous or unclear in meaning
+- Layout issues that cause confusion (overlapping elements, misaligned content)
+- Colour choices that impair readability or accessibility
+
+For each issue you flag, you MUST specify:
+- The exact screenshot area (e.g. "top navigation bar", "product image panel", "CTA button")
+- What specifically is wrong visually
+- Confidence: "high" only if clearly broken, "medium" if debatable
+
+When in doubt, omit. Only flag what you can see. Maximum 5 issues.
+
+Respond with ONLY a valid JSON array. No explanation, no markdown, no preamble.
+If you find no issues, respond with exactly: []
+Format: [{"issue_id": "UX-XXX", "confidence": "high"|"medium", "evidence": "max 20 words describing specific visual area"}]`;
 
   const prompt = `${instruction}\n\nLibrary (compact):\n${JSON.stringify(compactLib, null, 2)}`;
 
@@ -579,16 +591,50 @@ Do not return every issue — only ones with real visual evidence.`;
       responseText = data.choices?.[0]?.message?.content ?? "[]";
     }
 
-    const jsonMatch = responseText.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) {
-      console.error("[imageDetectionPass] No JSON array in response");
+    // robust parsing helper to handle markdown, truncated responses, etc.
+    function parseImageDetectionResponse(raw: string): Array<{ issue_id?: string; screenshot_index?: number; confidence?: string; evidence_summary?: string }> {
+      if (!raw) return [];
+      // try direct parse
+      try {
+        const parsed = JSON.parse(raw.trim());
+        if (Array.isArray(parsed)) return parsed;
+      } catch {}
+
+      // try markdown code block
+      const codeBlock = raw.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/);
+      if (codeBlock) {
+        try {
+          const parsed = JSON.parse(codeBlock[1]);
+          if (Array.isArray(parsed)) return parsed;
+        } catch {}
+      }
+
+      // try generic first array
+      const arrayMatch = raw.match(/\[[\s\S]*\]/);
+      if (arrayMatch) {
+        try {
+          const parsed = JSON.parse(arrayMatch[0]);
+          if (Array.isArray(parsed)) return parsed;
+        } catch {}
+      }
+
+      // partial recovery of individual objects
+      const objectMatches = [...raw.matchAll(/\{\s*"issue_id"\s*:[\s\S]*?\}/g)];
+      if (objectMatches.length > 0) {
+        const recovered = objectMatches
+          .map((m) => { try { return JSON.parse(m[0]); } catch { return null; } })
+          .filter((x) => x) as any[];
+        if (recovered.length > 0) {
+          console.warn('[imageDetectionPass] Recovered', recovered.length, 'issues from partial response');
+          return recovered;
+        }
+      }
+
+      console.error('[imageDetectionPass] No JSON array in response. Raw (first 300):', raw.slice(0, 300));
       return [];
     }
-    const parsed = JSON.parse(jsonMatch[0]) as Array<{ issue_id?: string; screenshot_index?: number; confidence?: string; evidence_summary?: string }>;
-    if (!Array.isArray(parsed)) {
-      console.error("[imageDetectionPass] Parsed value is not an array");
-      return [];
-    }
+
+    const parsed = parseImageDetectionResponse(responseText);
     const results: ImageDetectedResult[] = [];
     for (const item of parsed) {
       const conf = (item.confidence ?? "").toLowerCase();
@@ -597,7 +643,7 @@ Do not return every issue — only ones with real visual evidence.`;
       if (!id) continue;
       const idx = typeof item.screenshot_index === "number" ? item.screenshot_index : 0;
       const summary = typeof item.evidence_summary === "string" ? item.evidence_summary.trim().slice(0, 200) : "";
-      results.push({ issue_id: id, evidence_summary: summary, screenshot_index: idx });
+      results.push({ issue_id: id, evidence_summary: summary, screenshot_index: idx, confidence: conf === 'high' ? 1 : 0.5 });
     }
     return results;
   } catch (e) {
@@ -655,7 +701,7 @@ LIBRARY MAPPING (CRITICAL RULE)
 - **MANDATORY ID MAPPING**: Under the "Discover", "Decide", or "Book" sections, EVERY SINGLE Key UX Issue you list MUST be a library issue from the RAG context provided below.
 - Each finding MUST start with a Library ID in the format: **UX-###: [Issue Title]**.
 - **NO FREE-TEXT FINDINGS**: Do NOT invent or describe issues that are not in the library under the main journey sections. If it is not in the library, it is NOT an issue for the main sections. This ensures the audit is grounded in company standards.
-- If you observe a real UX problem that absolutely does not fit any library ID, you MUST place it in a separate section called: “Additional observations (not in library)” and do NOT assign it an ID.
+- If you observe a real UX problem that absolutely does not fit any library ID, you MUST place it in a separate section called: “Additional observations (not in library)” and do NOT assign it an ID. If you observe a pattern that significantly disrupts the user journey but has no matching library ID — such as unexpected account merging prompts mid-checkout, third-party redirects, or platform migration banners — include it in Additional observations with a clear description of the friction it creates and its likely conversion impact.
 - **REJECTION RULE**: Any finding in the main journey without a valid library ID will be rejected.
 - If an issue is in the "SUPPRESSED ISSUES" list, DO NOT include it in the main sections.
 

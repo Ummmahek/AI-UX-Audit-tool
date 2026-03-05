@@ -6,16 +6,17 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "postinstall": "npx playwright install"
   },
   "dependencies": {
     "cheerio": "^1.2.0",
     "next": "16.1.6",
     "openai": "^6.16.0",
+    "playwright": "^1.58.2",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-markdown": "^9.0.1",
-    "tesseract.js": "^7.0.0",
     "ts-node": "^10.9.2"
   },
   "devDependencies": {

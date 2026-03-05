@@ -37,6 +37,13 @@ Each issue object should include at least: `issue_title`, `user_problem`, `recom
 ### Requirements
 - Node.js **>= 20.9.0** (Next.js 16 requires this; current machine is on 18.x)
 - `OPENAI_API_KEY` in a `.env.local` file to fetch live reports; without it the UI returns a sample response.
+- _If you plan to crawl JavaScript-rendered sites_ the project uses Playwright and
+  requires its browser binaries. After installing dependencies run:
+  ```bash
+  npx playwright install
+  ```
+  (a `postinstall` script is also added to `package.json` so this happens
+  automatically when performing `npm install`).
 
 ### Quick start
 ```bash

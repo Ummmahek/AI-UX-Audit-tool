@@ -9,9 +9,13 @@ import {
   simpleRetrieveIssues,
   validateIssuesWithLLM,
   type ImageDetectedResult,
+  type Issue,
   type RetrievedIssue,
 } from "@/lib/ux";
-import { crawlKeyPaths } from "@/lib/crawl";
+import { crawlKeyPaths, type CrawlResult } from "@/lib/crawl";
+import { runDeterministicDetection } from '@/lib/detect';
+import { deterministicSignalCheck } from '@/lib/signalMatch';
+import { crawlWithPlaywright, shouldUsePlaywright } from '@/lib/crawlPlaywright';
 
 export const runtime = "nodejs";
 
@@ -67,11 +71,12 @@ async function fileToDataUrl(file: File): Promise<string> {
 }
 
 // Temporary helper: build a plain-text representation of screenshots for
-// retrieval purposes. Currently just concatenates file names, but this
-// can be replaced later with proper OCR or metadata extraction.
+// retrieval purposes. Tesseract OCR has been removed — structural detection
+// is now handled by Playwright DOM checks and visual evidence comes through
+// the imageDetectionPass. Returning empty string to avoid polluting
+// deterministic keyword matching.
 async function extractTextFromScreenshots(files: File[]): Promise<string> {
-  if (!files || files.length === 0) return "";
-  return files.map((f) => f.name).join(" ");
+  return '';
 }
 
 const SAMPLE_REPORT = `Journey summary (sample)
@@ -100,10 +105,14 @@ export async function POST(request: Request) {
   let useCompany = true;
   let topK = 7;
   let model = "openrouter/auto";
+  // user-uploaded screenshots
   let screenshots: File[] = [];
+  // aggregated screenshot URLs from user + crawler
+  let allScreenshotUrls: string[] = [];
   let hasScreenshots = false;
   let crawlContext = "";
-
+  let deterministicIssues: any[] = [];
+  let screenshotText = "";
   try {
     const parsed = (await parseRequest(request)) as MultipartPayload;
     url = parsed.url;
@@ -122,9 +131,48 @@ export async function POST(request: Request) {
     }
 
     // Crawl key paths to provide evidence-rich context (secure + best-effort).
+    let crawlResult: CrawlResult = { pages: [], targetUrl: '', blockedOrLimited: false };
     try {
-      const crawl = await crawlKeyPaths(url);
-      const pageBlocks = crawl.pages
+      crawlResult = await crawlKeyPaths(url);
+
+      // Escalate to Playwright if the crawl returned JS-rendered thin content
+      const combinedBodyText = crawlResult.pages.map((p) => p.excerpt ?? '').join(' ');
+      const shouldUse = shouldUsePlaywright(combinedBodyText);
+      console.log('[PLAYWRIGHT] shouldUsePlaywright result:', shouldUse);
+      console.log('[PLAYWRIGHT] combinedBodyText length:', combinedBodyText.length);
+      console.log('[PLAYWRIGHT] combinedBodyText sample:', combinedBodyText.slice(0, 200));
+      if (shouldUse) {
+        try {
+          const playwrightResult = await crawlWithPlaywright(url);
+          if (playwrightResult.pages.length > 0) {
+            Object.assign(crawlResult, playwrightResult);
+          }
+        } catch (err) {
+          console.error('[PLAYWRIGHT] crawlWithPlaywright failed:', err);
+          // Playwright failed — continue with cheerio result
+        }
+      }
+
+      // collect any screenshots produced by the crawler
+      const crawlerScreens = crawlResult.pages
+        .map((p) => (p as any).screenshot)
+        .filter((s): s is string => typeof s === 'string');
+      if (crawlerScreens.length > 0) {
+        allScreenshotUrls.push(...crawlerScreens);
+        console.log('[PLAYWRIGHT] captured screenshots from', crawlerScreens.length, 'pages');
+      }
+
+      // Run deterministic detection based on DOM flags
+      deterministicIssues = runDeterministicDetection(
+        crawlResult.pages.map((p) => ({
+          url: p.finalUrl ?? p.requestedUrl,
+          label: p.label ?? 'unknown',
+          domChecks: p.domChecks ?? ({} as any),
+        })),
+        screenshotText
+      );
+
+      const pageBlocks = crawlResult.pages
         .map((p) => {
           const header = `### ${p.label.toUpperCase()}`;
           const meta = [
@@ -133,6 +181,7 @@ export async function POST(request: Request) {
             typeof p.status === "number" ? `status: ${p.status}` : null,
             p.blockedByBotProtection ? `bot_protection: true` : null,
             p.error ? `error: ${p.error}` : null,
+            p.screenshot ? `screenshot: available` : null,
           ]
             .filter(Boolean)
             .join(" | ");
@@ -141,7 +190,7 @@ export async function POST(request: Request) {
         })
         .join("\n\n");
 
-      crawlContext = `\n\n---\nSITE CRAWL EXCERPTS (best-effort; may be partial/blocked)\nNote: ${crawl.note ?? "Use as supporting evidence only."
+      crawlContext = `\n\n---\nSITE CRAWL EXCERPTS (best-effort; may be partial/blocked)\nNote: ${crawlResult.note ?? "Use as supporting evidence only."
         }\n\n${pageBlocks}\n---\n`;
     } catch (e) {
       // Smooth fallback: continue without crawl.
@@ -155,23 +204,92 @@ export async function POST(request: Request) {
     // Evidence-aware retrieval: run after crawl so retrieval can use crawl excerpts
     let retrieved: RetrievedIssue[] = [];
     let suppressedIssues: Array<{ issue: RetrievedIssue; reason: string }> = [];
-    let screenshotText = "";
     let imageDetectedResults: ImageDetectedResult[] = [];
 
     if (useCompany) {
       try {
         const issueLibrary = await loadIssueLibrary();
-        // derive any text from screenshots for negative-signal checking (reuse later for validation)
+        // derive any text from user-uploaded screenshots for negative-signal checking (reuse later for validation)
         screenshotText = await extractTextFromScreenshots(screenshots);
+        console.log('[OCR DEBUG] Screenshot text length:', screenshotText.length);
+        console.log('[OCR DEBUG] First 300 chars:', screenshotText.slice(0, 300));
+
+        // convert user files to data URLs and merge crawler screenshots
+        const userScreenshotUrls = await Promise.all(screenshots.map(fileToDataUrl));
+        allScreenshotUrls.push(...userScreenshotUrls);
+        hasScreenshots = allScreenshotUrls.length > 0;
 
         // Image-led detection pass (before retrieval) when screenshots are present
         if (hasScreenshots && (claudeKey || openRouterKey)) {
           try {
             const apiKey = claudeKey || openRouterKey!;
             const useClaude = Boolean(claudeKey);
-            const screenshotUrls = await Promise.all(screenshots.map(fileToDataUrl));
-            imageDetectedResults = await imageDetectionPass(screenshotUrls, issueLibrary, apiKey, useClaude);
-            console.log(`[API] imageDetectionPass returned ${imageDetectedResults.length} issues: ${imageDetectedResults.map((r) => r.issue_id).join(", ") || "(none)"}`);
+            const screenshotUrls = [...allScreenshotUrls];
+
+
+            // The prompt already instructs the LLM to only flag what it can see
+            // visually, so here we simply remove issues that are *purely* DOM‑checkable
+            // (and anything the deterministic rules already confirmed this run).
+            const PURELY_DOM_CHECKABLE_IDS = new Set<string>([
+              // heading/meta rules
+              'DET-001','DET-002','DET-003','DET-004','DET-005','DET-006','DET-007','DET-008',
+              // checkout DOM rules
+              'DET-009','DET-010','DET-011','DET-012','DET-013','DET-014','DET-015','DET-016','DET-017',
+              // other library issues guaranteed DOM‑checkable
+              'UX-063','UX-102','UX-067','UX-073','UX-028',
+            ]);
+
+            const deterministicConfirmedIds = new Set(
+              deterministicIssues.map((i) => i.issue_id),
+            );
+
+            let visionLibrary = issueLibrary.filter(
+              (issue) =>
+                !!issue.issue_id &&
+                !PURELY_DOM_CHECKABLE_IDS.has(issue.issue_id) &&
+                !deterministicConfirmedIds.has(issue.issue_id),
+            );
+
+            // --- FIX 1: score and cap to top K relevant issues ---
+            function scoreIssueRelevance(issue: typeof issueLibrary[0], goal: string): number {
+              const goalTokens = goal.toLowerCase().match(/\b[a-z]{3,}\b/g) ?? [];
+              const issueText = `${issue.issue_title ?? ''} ${((issue as any).detection_hint ?? '')}`.toLowerCase();
+              return goalTokens.filter((t) => issueText.includes(t)).length;
+            }
+            const TOP_K_VISION = 15;
+            const ranked = visionLibrary
+              .map((issue) => ({ issue, score: scoreIssueRelevance(issue, goal ?? '') }))
+              .sort((a, b) => b.score - a.score)
+              .slice(0, TOP_K_VISION)
+              .map(({ issue }) => issue);
+            visionLibrary = ranked;
+
+            console.log('[IMAGE PASS] Vision-only issue count after filtering:', visionLibrary.length);
+            console.log('[IMAGE PASS] Vision-only issue IDs:', visionLibrary.map((i) => i.issue_id));
+            console.log('[IMAGE PASS] Vision library capped to top', visionLibrary.length, 'issues');
+            console.log('[IMAGE PASS] Top vision issues:', visionLibrary.map((i) => i.issue_id));
+
+            const rawImageIssues = await imageDetectionPass(
+              screenshotUrls,
+              visionLibrary,
+              apiKey,
+              useClaude,
+              goal, // pass audit goal for context
+            );
+
+            // --- FIX 3: dedupe image results by ID, keeping highest confidence ---
+            const seenIds = new Map<string, typeof rawImageIssues[0]>();
+            for (const issue of rawImageIssues) {
+              const existing = seenIds.get(issue.issue_id);
+              if (!existing || (issue.confidence ?? 0) > (existing.confidence ?? 0)) {
+                seenIds.set(issue.issue_id, issue);
+              }
+            }
+            const dedupedImageIssues = Array.from(seenIds.values());
+            console.log('[API] Vision pass final deduped issues:', dedupedImageIssues.map((i) => i.issue_id));
+
+            imageDetectedResults = dedupedImageIssues;
+
           } catch (e) {
             console.error(`[API] imageDetectionPass failed (continuing without):`, e);
           }
@@ -187,6 +305,12 @@ export async function POST(request: Request) {
           hasScreenshots,
           imageDetectedResults.length > 0 ? imageDetectedResults : undefined,
         );
+        // ensure existing retrieved issues carry imageConfirmed flag
+        const imageConfirmedIds = new Set(imageDetectedResults.map((r) => r.issue_id));
+        retrieved = retrieved.map((iss) => ({
+          ...iss,
+          imageConfirmed: imageConfirmedIds.has(iss.issue_id ?? ''),
+        }));
         console.log(`[API] Retrieved ${retrieved.length} issues for url: ${url}, goal: ${goal}`);
         
         // BUG FIX 2: Append image-detected issues not already in retrieved (bypass topK cap)
@@ -204,6 +328,7 @@ export async function POST(request: Request) {
               const issue = byId.get(item.issue_id);
               if (issue) {
                 (issue as any).source = "image-detection"; // Mark for BUG FIX 3
+                (issue as any).imageConfirmed = true;
                 retrieved.push(issue);
               }
             }
@@ -224,6 +349,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         report: SAMPLE_REPORT,
         retrievedIssues: retrieved,
+        deterministicIssues,
         usedMock: true,
         model,
         usedCompany: useCompany,
@@ -231,48 +357,61 @@ export async function POST(request: Request) {
       });
     }
 
-    // Validate issues via LLM and apply penalties programmatically
+    // Deterministic signal matching — replaces validateIssuesWithLLM()
     let validatedIssues = retrieved;
     if (useCompany && retrieved.length > 0) {
-      try {
-        const apiKey = claudeKey || openRouterKey!;
-        const useClaude = Boolean(claudeKey);
+      const crawlTextCombined = crawlResult.pages.map((p) => p.excerpt ?? '').join(' ');
 
-        // Fix for screenshot blindness: convert files to data URLs before validation
-        const screenshotImages = hasScreenshots
-          ? await Promise.all(screenshots.map(fileToDataUrl))
-          : undefined;
+      const validated: typeof retrieved = [];
+      const suppressed: Array<{ issue: typeof retrieved[0]; reason: string }> = [];
 
-        const validationResult = await validateIssuesWithLLM(
-          retrieved,
-          url,
-          goal,
-          crawlContext,
-          screenshotText,
-          apiKey,
-          useClaude,
-          screenshotImages,
-          imageDetectedResults.length > 0 ? imageDetectedResults : undefined,
-        );
-        validatedIssues = validationResult.validated;
-        suppressedIssues = validationResult.suppressed;
-        console.log(`[API] Validated: ${validatedIssues.length} included, ${suppressedIssues.length} suppressed`);
+      const allCandidateIssues = retrieved;
+      console.log('[DEBUG] imageConfirmed flags:', 
+        allCandidateIssues.map(i => ({ id: i.issue_id, confirmed: (i as any).imageConfirmed }))
+      );
 
-        // extra dedup step at the API layer just in case
-        const seen = new Set<string>();
-        validatedIssues = validatedIssues.filter((iss) => {
-          if (!iss.issue_id) return true;
-          if (seen.has(iss.issue_id)) {
-            console.log(`[API] Removing duplicate id after validation: ${iss.issue_id}`);
-            return false;
-          }
-          seen.add(iss.issue_id);
-          return true;
-        });
-      } catch (e) {
-        console.error(`[API] Validation failed, using all retrieved issues:`, e);
-        // Fallback: use all retrieved issues if validation fails
+      for (const issue of allCandidateIssues) {
+        // Deterministic issues (from detect.ts) are NEVER suppressed
+        if ((issue as any).source === 'deterministic') {
+          validated.push(issue);
+          continue;
+        }
+        // Image-confirmed issues are protected from suppression (preserve existing behaviour)
+        if ((issue as any).imageConfirmed === true) {
+          validated.push(issue);
+          continue;
+        }
+        // All other issues go through deterministic signal matching
+        const result = deterministicSignalCheck(issue, crawlTextCombined, screenshotText);
+        if (!result.suppressed) {
+          validated.push({ ...issue, confidence: result.score });
+        } else {
+          suppressed.push({ issue, reason: result.suppression_reason ?? 'No signals matched' });
+        }
       }
+
+      // Merge deterministic issues — add any that aren't already in the validated list
+      for (const det of deterministicIssues) {
+        const alreadyPresent = validated.some((v) => v.issue_id === det.issue_id);
+        if (!alreadyPresent) {
+          validated.push({
+            issue_id: det.issue_id,
+            issue_title: det.issue_title,
+            source: 'deterministic',
+            confidence: det.confidence,
+            evidence: det.evidence,
+            // Fill other required Issue fields with safe defaults if needed
+          } as any);
+        }
+      }
+
+      validatedIssues = validated;
+      // deduplicate suppressed list by issue_id to avoid noise
+      const deduplicatedSuppressed = suppressed.filter(
+        (item, index, self) =>
+          index === self.findIndex((s) => s.issue.issue_id === item.issue.issue_id)
+      );
+      suppressedIssues = deduplicatedSuppressed;
     }
 
     const messages = useCompany
@@ -287,6 +426,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         report: SAMPLE_REPORT,
         retrievedIssues: retrieved,
+        deterministicIssues,
         usedMock: true,
         model,
         usedCompany: useCompany,
@@ -495,6 +635,7 @@ export async function POST(request: Request) {
         ...issue,
         is_validated: validatedIssues.some((v) => v.issue_id === issue.issue_id),
       })),
+      deterministicIssues,
       suppressedIssues: suppressedIssues.map((s) => ({
         issue_id: s.issue.issue_id,
         issue_title: s.issue.issue_title,
@@ -540,6 +681,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         report: SAMPLE_REPORT,
         retrievedIssues: retrieved,
+        deterministicIssues,
         usedMock: true,
         model: "openrouter/auto",
         usedCompany: useCompany,
