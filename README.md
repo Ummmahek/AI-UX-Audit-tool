@@ -5,7 +5,7 @@ Input: website URL + goal. Output: a journey-based first-draft UX audit. The dem
 ### What’s inside
 - Next.js App Router + TypeScript + Tailwind
 - API route `/api/generate` that calls OpenAI’s Responses API (or a sample report if no key is set)
-- Simple keyword retrieval over a UX issue library JSON (default: `src/data/ux_issue_library_ecommerce_v1.json`)
+- Simple keyword retrieval over a UX issue library JSON (default: `src/data/ux_issue_library_v4.3_COMPLETE.json`)
 - Presentation-first UI to compare “with vs without company knowledge”
 
 ### Replacing the UX issue library
@@ -37,9 +37,12 @@ Each issue object should include at least: `issue_title`, `user_problem`, `recom
 ### Requirements
 - Node.js **>= 20.9.0** (Next.js 16 requires this; current machine is on 18.x)
 - `OPENAI_API_KEY` in a `.env.local` file to fetch live reports; without it the UI returns a sample response.
-- _If you plan to crawl JavaScript-rendered sites_ the project uses Playwright and
-  requires its browser binaries. After installing dependencies run:
+- _If you plan to crawl JavaScript-rendered sites_ the project now ships a
+  universal Playwright-based crawler (`crawlWebsite`) that leverages
+  `playwright-extra` with manual stealth techniques to evade bot protections. Install the
+  additional package and browser binaries:
   ```bash
+  npm install playwright-extra
   npx playwright install
   ```
   (a `postinstall` script is also added to `package.json` so this happens

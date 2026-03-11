@@ -1,4 +1,4 @@
-const { loadIssueLibrary, simpleRetrieveIssues } = require('../lib/ux');
+const { loadIssueLibrary, simpleRetrieveIssues, retrieveRelevantIssues, inferSiteType, getTerminology } = require('../lib/ux');
 (async () => {
   const lib = await loadIssueLibrary();
   const ux052 = lib.find(i => i.issue_id === 'UX-052');
@@ -19,6 +19,37 @@ const { loadIssueLibrary, simpleRetrieveIssues } = require('../lib/ux');
   const missing = ['UX-038','UX-005','UX-035','UX-075','UX-051'];
   for (const id of missing) {
     console.log(`${id} present?`, ids2.includes(id));
+  }
+
+  // ------------------------------------------------------------------
+  // new tests for site-type detection / non-ecommerce filtering
+  console.log('\n--- non-ecommerce (real estate) retrieval ---');
+  const nonEcomText = 'property listing map filters price';
+  const res3 = simpleRetrieveIssues(lib, 'https://example.com', 'find house', 20, nonEcomText, '', false);
+  const ids3 = res3.map(i => i.issue_id);
+  console.log('retrieved ids (non-ecom)', ids3);
+  // ensure no cart/checkout-only issues slip through
+  const cartOnly = ['UX-007','UX-034','UX-097','UX-008','UX-009','UX-035','UX-036'];
+  for (const id of cartOnly) {
+    console.log(`${id} filtered out?`, !ids3.includes(id));
+  }
+
+  console.log('\n--- retrieveRelevantIssues wrapper ---');
+  const wrapper = await retrieveRelevantIssues('https://example.com', 'find house', 10, nonEcomText, '', false);
+  console.log('wrapper metadata', { siteType: wrapper.siteType, terminology: wrapper.terminology, applicable: wrapper.applicableCount, total: wrapper.totalCount });
+
+  // quick siteTypeDetection check
+  const det = detectSiteType(nonEcomText, 'https://example.com');
+  console.log('detectSiteType result', det);
+
+  // sanity-check new crawler helper (won't actually fetch due to offline environment)
+  try {
+    const { crawlWebsite } = require('../lib/crawlPlaywright');
+    console.log('\n--- crawlWebsite smoke test ---');
+    // not calling for real, just verify import works
+    console.log('crawlWebsite function available:', typeof crawlWebsite);
+  } catch (e) {
+    console.error('crawlWebsite import failed', e);
   }
 
 })();

@@ -1,5 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
+import { detectSiteType } from "./siteTypeDetection";
 
 export type Issue = {
   issue_id?: string;
@@ -121,6 +122,11 @@ function keywordScore(
     "product": ["item", "sku", "listing", "merchandise"],
     "homepage": ["home", "landing", "main"],
     "flow": ["journey", "process", "path"],
+    // additional terms for other site types
+    "property": ["real estate", "listing", "unit"],
+    "article": ["post", "blog", "news"],
+    "service": ["solution", "offering"],
+    "pricing": ["upgrade", "subscription"],
   };
 
   let synonymBonus = 0;
@@ -224,6 +230,14 @@ function inferPageTypes(
   test(["forms", "form"], "Forms");
   test(["navigation", "nav", "menu"], "Navigation");
   test(["mobile"], "Mobile");
+  // non-ecommerce page types / terminology
+  test(["property", "listing", "real estate"], "Property Listings");
+  test(["article", "blog", "post", "news"], "Article Pages");
+  test(["dashboard", "feature list"], "Dashboard");
+  test(["settings", "feature detail"], "Feature Detail");
+  test(["pricing", "upgrade"], "Pricing");
+  test(["services", "solution"], "Services");
+  test(["contact", "inquiry", "demo"], "Contact Forms");
 
   return Array.from(matched);
 }
@@ -236,6 +250,179 @@ function inferPageTypes(
  * Absence-track behaviour (detection_type === "absence") bypasses keywordScore() and uses
  * inferred page types plus confidence weight to seed the candidate pool.
  */
+export function inferSiteType(
+  url: string,
+  goal: string,
+  crawlExcerpts?: string,
+  screenshotText?: string,
+): "ecommerce" | "real_estate" | "saas" | "content" | "documentation" | "corporate" | "unknown" {
+  // simple keyword heuristics to categorize the site.  This is intentionally
+  // lightweight since we only care about distinguishing ecommerce vs non-
+  // ecommerce for filtering; additional categories are for future use or
+  // contextual hints in prompts.
+  const hay = `${url} ${goal} ${crawlExcerpts ?? ""} ${screenshotText ?? ""}`.toLowerCase();
+
+  if (/(cart|checkout|add to cart|product|sku|price)/.test(hay)) return "ecommerce";
+  if (/(property|real estate|listing|agent|rent|sale)/.test(hay)) return "real_estate";
+  if (/(dashboard|settings|saas|web application|login|signup|user account)/.test(hay)) return "saas";
+  if (/(article|blog|news|media|category page|post)/.test(hay)) return "content";
+  if (/(documentation|api reference|help center|docs)/.test(hay)) return "documentation";
+  if (/(about us|services|contact us|marketing|corporate)/.test(hay)) return "corporate";
+  return "unknown";
+}
+
+function filterLibraryForSiteType(library: Issue[], siteType: string): Issue[] {
+  if (siteType === "ecommerce" || siteType === "unknown") {
+    return library; // no filtering needed
+  }
+
+  // non-ecommerce sites: allow general issues plus low/medium relevance
+  // ecommerce issues that don't require a cart or checkout.  also apply
+  // hard exclusions by issue_id.
+  const hardExclusions = new Set([
+    "UX-007", "UX-034", "UX-097", // cart-specific
+    "UX-008", "UX-009", "UX-035", "UX-036", "UX-063",
+    "UX-102", "UX-105", "UX-106", "UX-107", // checkout-specific
+  ]);
+
+  return library.filter((issue) => {
+    if (issue.issue_id && hardExclusions.has(issue.issue_id)) return false;
+
+    if (issue.domain === "general") return true;
+    if (issue.domain === "ecommerce") {
+      const rel = String(issue.ecommerce_relevance ?? "").toLowerCase();
+      const lowOrMed = rel === "low" || rel === "medium";
+      const requiresCart = Boolean(issue.requires_cart);
+      const requiresCheckout = Boolean(issue.requires_checkout);
+      return lowOrMed && !requiresCart && !requiresCheckout;
+    }
+    return false;
+  });
+}
+
+/**
+ * Return terminology mapping based on site type.  Used for prompt generation
+ * and UI metadata.
+ */
+export function getTerminology(siteType: string) {
+  const terminologyMap: Record<string, any> = {
+    ecommerce: {
+      listingPage: 'Product Listing Page (PLP)',
+      detailPage: 'Product Detail Page (PDP)',
+      conversionPage: 'Cart & Checkout',
+      itemName: 'product',
+      itemAction: 'purchase',
+    },
+    real_estate: {
+      listingPage: 'Property Listings Page',
+      detailPage: 'Property Details Page',
+      conversionPage: 'Inquiry Forms',
+      itemName: 'property',
+      itemAction: 'inquire',
+    },
+    saas: {
+      listingPage: 'Features / Dashboard',
+      detailPage: 'Feature Details',
+      conversionPage: 'Pricing / Signup',
+      itemName: 'feature',
+      itemAction: 'subscribe',
+    },
+    content: {
+      listingPage: 'Category / Archive Pages',
+      detailPage: 'Article Pages',
+      conversionPage: null,
+      itemName: 'article',
+      itemAction: 'read',
+    },
+    corporate: {
+      listingPage: 'Services Page',
+      detailPage: 'Service Details',
+      conversionPage: 'Contact Form',
+      itemName: 'service',
+      itemAction: 'contact',
+    },
+    documentation: {
+      listingPage: 'Documentation Index',
+      detailPage: 'Doc Pages',
+      conversionPage: null,
+      itemName: 'documentation',
+      itemAction: 'implement',
+    },
+  };
+
+  return terminologyMap[siteType] || terminologyMap.ecommerce;
+}
+
+/**
+ * Filters an issue list according to site type, excluding cart/checkout when
+ * the site is non-ecommerce.  This is intended for use before any vision-
+ * based or keyword retrieval steps; it mirrors the logic of
+ * filterLibraryForSiteType but operates on arbitrary arrays and logs the
+ * filtering event.
+ */
+export function filterApplicableIssues(allIssues: Issue[], siteType: string): Issue[] {
+  const cartCheckoutIssues = new Set([
+    'UX-007', 'UX-034', 'UX-097', // Cart-specific
+    'UX-008', 'UX-009', 'UX-035', 'UX-036', // Checkout-specific
+    'UX-063', 'UX-102', 'UX-105', 'UX-106', 'UX-107', // Payment/delivery
+  ]);
+
+  if (siteType !== 'ecommerce') {
+    console.log(`[FILTER] Excluding ${cartCheckoutIssues.size} cart/checkout issues for ${siteType} site`);
+    return allIssues.filter((issue) => {
+      if (issue.issue_id && cartCheckoutIssues.has(issue.issue_id)) return false;
+      if (issue.requires_cart || issue.requires_checkout) return false;
+      return true;
+    });
+  }
+  return allIssues;
+}
+
+/**
+ * Higher-level helper used by the API route.  Detects site type, filters the
+ * library, retrieves top issues and returns metadata for prompts/UI.
+ */
+export async function retrieveRelevantIssues(
+  url: string,
+  goal: string,
+  topK = 7,
+  crawlExcerpts?: string,
+  screenshotText = "",
+  hasScreenshots = false,
+  imageDetected?: ImageDetectedResult[],
+): Promise<{
+  issues: Issue[];
+  siteType: string;
+  terminology: any;
+  applicableCount: number;
+  totalCount: number;
+}> {
+  const library = await loadIssueLibrary();
+  // use robust detection which may fallback to URL if content blocked
+  const detection = detectSiteType(crawlExcerpts ?? '', url);
+  const siteType = detection.type;
+  const applicableIssues = filterLibraryForSiteType(library, siteType);
+  const terminology = getTerminology(siteType);
+  const retrieved = simpleRetrieveIssues(
+    library,
+    url,
+    goal,
+    topK,
+    crawlExcerpts,
+    screenshotText,
+    hasScreenshots,
+    imageDetected,
+  );
+
+  return {
+    issues: retrieved,
+    siteType,
+    terminology,
+    applicableCount: applicableIssues.length,
+    totalCount: library.length,
+  };
+}
+
 export function simpleRetrieveIssues(
   issueLibrary: Issue[],
   url: string,
@@ -246,11 +433,14 @@ export function simpleRetrieveIssues(
   hasScreenshots = false,
   imageDetected?: ImageDetectedResult[],
 ): RetrievedIssue[] {
+  const siteType = inferSiteType(url, goal, crawlExcerpts, screenshotText);
+  const filteredLibrary = filterLibraryForSiteType(issueLibrary, siteType);
+
   const detectionType = (issue: Issue): string =>
     typeof (issue as any).detection_type === "string" ? String((issue as any).detection_type) : "presence";
 
-  const presenceIssues = issueLibrary.filter((issue) => detectionType(issue) !== "absence");
-  const absenceIssues = issueLibrary.filter((issue) => detectionType(issue) === "absence");
+  const presenceIssues = filteredLibrary.filter((issue) => detectionType(issue) !== "absence");
+  const absenceIssues = filteredLibrary.filter((issue) => detectionType(issue) === "absence");
 
   // Step 1 (presence track): Keyword-based scoring (broadened query for better recall)
   const keywordScored = presenceIssues
@@ -679,6 +869,7 @@ Generate a FIRST-DRAFT UX AUDIT.
 This is an experience-level assessment, not a checklist.
 
 RULES
+- First, identify the **site type** based on the URL, goal, crawl excerpts, and any screenshots. Classify as one of: e‑commerce, real estate, SaaS/web application, content/media, documentation/help, or corporate/marketing. Use appropriate terminology throughout (e.g. "Property Listings" not "PLP" for real estate) and only flag issues that apply to that site type. Non‑ecommerce sites should exclude cart/checkout-specific issues and translate "product/cart/checkout" language to their equivalent (property, article, service, inquiry form, etc.).
 - Evidence hierarchy (STRICT – screenshots always win):
 - 1) Screenshots (PRIMARY – most reliable; use for cart, checkout, PDP whenever provided). 2) Crawl (SECONDARY – often incomplete or blocked on cart/checkout). 3) RAG only to label what you see. 4) No inference without evidence.
 - SCREENSHOTS OVER CRAWL: When the user provides screenshots, treat them as the main source of truth; crawl often fails on cart/checkout. For any page visible in screenshots, base findings on screenshots only. ONLY ACTUALLY-PRESENT ISSUES: Include in the report ONLY issues for which you see direct evidence in screenshots or crawl; omit any RAG issue you do not see evidence for. You may reference UX issues from the context only when you have observed evidence for them.
@@ -759,7 +950,7 @@ export function buildGenericMessages(
   goal: string,
 ): PromptMessage[] {
   const systemPrompt = `You are an AI UX expert.
-Generate a first-draft UX audit for a transactional/e-commerce website using general UX heuristics.
+Generate a first-draft UX audit for a transactional/e-commerce website using general UX heuristics.  If the evidence indicates a non-ecommerce site (real estate, content, SaaS, documentation, or corporate), adapt terminology and focus accordingly (e.g. replace "product/PLP/PDP" with appropriate equivalents and omit cart/checkout issues).
 Do not assume access to analytics or user testing.
 Organize findings by user journey.
 

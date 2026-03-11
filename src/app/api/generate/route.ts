@@ -7,6 +7,9 @@ import {
   imageDetectionPass,
   loadIssueLibrary,
   simpleRetrieveIssues,
+  retrieveRelevantIssues,
+  inferSiteType,
+  filterApplicableIssues,
   validateIssuesWithLLM,
   type ImageDetectedResult,
   type Issue,
@@ -14,8 +17,9 @@ import {
 } from "@/lib/ux";
 import { crawlKeyPaths, type CrawlResult } from "@/lib/crawl";
 import { runDeterministicDetection } from '@/lib/detect';
+import { detectSiteType } from '@/lib/siteTypeDetection';
 import { deterministicSignalCheck } from '@/lib/signalMatch';
-import { crawlWithPlaywright, shouldUsePlaywright } from '@/lib/crawlPlaywright';
+import { crawlWebsite, shouldUsePlaywright } from '@/lib/crawlPlaywright';
 
 export const runtime = "nodejs";
 
@@ -143,12 +147,22 @@ export async function POST(request: Request) {
       console.log('[PLAYWRIGHT] combinedBodyText sample:', combinedBodyText.slice(0, 200));
       if (shouldUse) {
         try {
-          const playwrightResult = await crawlWithPlaywright(url);
-          if (playwrightResult.pages.length > 0) {
-            Object.assign(crawlResult, playwrightResult);
+          const pwResult = await crawlWebsite(url);
+          if (!pwResult.blocked && pwResult.bodyText) {
+            // convert to CrawlResult shape so outer logic stays the same
+            crawlResult.pages = [
+              {
+                url,
+                requestedUrl: url,
+                finalUrl: url,
+                excerpt: pwResult.bodyText,
+                screenshot: pwResult.screenshots[0] ? `data:image/png;base64,${pwResult.screenshots[0].toString('base64')}` : undefined,
+                label: 'homepage',
+              } as any,
+            ];
           }
         } catch (err) {
-          console.error('[PLAYWRIGHT] crawlWithPlaywright failed:', err);
+          console.error('[PLAYWRIGHT] crawlWebsite failed:', err);
           // Playwright failed — continue with cheerio result
         }
       }
@@ -205,6 +219,7 @@ export async function POST(request: Request) {
     let retrieved: RetrievedIssue[] = [];
     let suppressedIssues: Array<{ issue: RetrievedIssue; reason: string }> = [];
     let imageDetectedResults: ImageDetectedResult[] = [];
+    let metadata: any = {}; // added for site type/terminology info
 
     if (useCompany) {
       try {
@@ -218,6 +233,14 @@ export async function POST(request: Request) {
         const userScreenshotUrls = await Promise.all(screenshots.map(fileToDataUrl));
         allScreenshotUrls.push(...userScreenshotUrls);
         hasScreenshots = allScreenshotUrls.length > 0;
+
+        // detect site type EARLY using crawl context/text
+        const siteTypeDetection = detectSiteType(crawlContext, url);
+        console.log(`[API] Site Type: ${siteTypeDetection.type} (${siteTypeDetection.confidence})`);
+
+        // filter applicable issues before any vision pass
+        const applicableIssues = filterApplicableIssues(issueLibrary, siteTypeDetection.type);
+        console.log(`[API] Filtered: ${applicableIssues.length}/${issueLibrary.length} issues applicable`);
 
         // Image-led detection pass (before retrieval) when screenshots are present
         if (hasScreenshots && (claudeKey || openRouterKey)) {
@@ -243,7 +266,7 @@ export async function POST(request: Request) {
               deterministicIssues.map((i) => i.issue_id),
             );
 
-            let visionLibrary = issueLibrary.filter(
+            let visionLibrary = applicableIssues.filter(
               (issue) =>
                 !!issue.issue_id &&
                 !PURELY_DOM_CHECKABLE_IDS.has(issue.issue_id) &&
@@ -295,8 +318,12 @@ export async function POST(request: Request) {
           }
         }
 
-        retrieved = simpleRetrieveIssues(
-          issueLibrary,
+        // detect site type for additional context/logging and filtering
+        const siteType = inferSiteType(url, goal, crawlContext, screenshotText);
+        console.log(`[API] inferred site type: ${siteType}`);
+
+        // use enhanced retrieval helper which also returns site type & terminology
+        const retrievalResult = await retrieveRelevantIssues(
           url,
           goal,
           topK,
@@ -305,6 +332,18 @@ export async function POST(request: Request) {
           hasScreenshots,
           imageDetectedResults.length > 0 ? imageDetectedResults : undefined,
         );
+        retrieved = retrievalResult.issues;
+        // pass metadata to be included in the response (frontend can show badge)
+        metadata = {
+          siteType: retrievalResult.siteType,
+          terminology: retrievalResult.terminology,
+          applicableIssues: retrievalResult.applicableCount,
+          totalIssues: retrievalResult.totalCount,
+          confidence: siteTypeDetection.confidence,
+          evidence: siteTypeDetection.evidence,
+          issuesRetrieved: retrieved.length,
+          accessBlocked: crawlResult.blockedOrLimited,
+        };
         // ensure existing retrieved issues carry imageConfirmed flag
         const imageConfirmedIds = new Set(imageDetectedResults.map((r) => r.issue_id));
         retrieved = retrieved.map((iss) => ({
@@ -350,6 +389,7 @@ export async function POST(request: Request) {
         report: SAMPLE_REPORT,
         retrievedIssues: retrieved,
         deterministicIssues,
+        metadata,
         usedMock: true,
         model,
         usedCompany: useCompany,
@@ -427,6 +467,7 @@ export async function POST(request: Request) {
         report: SAMPLE_REPORT,
         retrievedIssues: retrieved,
         deterministicIssues,
+        metadata,
         usedMock: true,
         model,
         usedCompany: useCompany,
