@@ -1,6 +1,7 @@
-import fs from "fs/promises";
+﻿import fs from "fs/promises";
 import path from "path";
 import { detectSiteType } from "./siteTypeDetection";
+import { buildDynamicSystemPrompt, buildDynamicUserPrompt } from "./prompts";
 
 export type Issue = {
   issue_id?: string;
@@ -554,10 +555,10 @@ export function simpleRetrieveIssues(
     // NOTE: Removed aggressive early negative-signal filtering here.  Earlier
     // versions dropped candidates based solely on any matching negative
     // phrase, which occasionally suppressed perfectly valid issues (e.g.
-    // UX-040 when the header text said “Secure Checkout”).  We'll still pass
+    // UX-040 when the header text said â€œSecure Checkoutâ€).  We'll still pass
     // negative signals through to the later LLM validation step, but retrieval
     // should not throw issues away before the audit is generated.
-    
+
     // If screenshots are present, relax filters to surface keyword-matched issues with partial crawl evidence
     const filtered = evidenceScored.filter((entry) => {
       const ev = entry.evidenceScore ?? 0;
@@ -665,7 +666,7 @@ function buildCompactLibrarySummary(issueLibrary: Issue[]): Array<{ issue_id: st
 /**
  * Image-led detection pass: run BEFORE retrieval when screenshots are present.
  * Sends screenshots + compact library to LLM; returns issue IDs with clear visual evidence.
- * On parse failure or error, returns [] and logs — does not throw. Pipeline continues unchanged.
+ * On parse failure or error, returns [] and logs â€” does not throw. Pipeline continues unchanged.
  */
 export async function imageDetectionPass(
   screenshotDataUrls: string[],
@@ -683,16 +684,16 @@ export async function imageDetectionPass(
     ? `The user's audit goal is: "${auditGoal}".\nPrioritise identifying visual issues relevant to this goal.\nYou are reviewing ${screenshotDataUrls.length} screenshot(s) of a website.\n\n`
     : '';
 
-  const instruction = `${goalPrefix}You are a visual UX reviewer. Your ONLY job is to identify issues that require looking at the screenshots — things that cannot be detected from HTML or DOM inspection alone.
+  const instruction = `${goalPrefix}You are a visual UX reviewer. Your ONLY job is to identify issues that require looking at the screenshots â€” things that cannot be detected from HTML or DOM inspection alone.
 
 ONLY flag issues from the provided list if you can point to a specific visual element in the screenshots as evidence.
 
 YOU MUST NOT flag:
-- Missing elements (buttons, labels, fields) — these are checked programmatically
-- Form structure issues — checked programmatically  
-- Navigation elements (breadcrumbs, progress bars) — checked programmatically
-- Trust badges or security text — checked programmatically
-- Any issue where the evidence is "I don't see X" — absence detection is not your job
+- Missing elements (buttons, labels, fields) â€” these are checked programmatically
+- Form structure issues â€” checked programmatically  
+- Navigation elements (breadcrumbs, progress bars) â€” checked programmatically
+- Trust badges or security text â€” checked programmatically
+- Any issue where the evidence is "I don't see X" â€” absence detection is not your job
 
 YOU SHOULD flag:
 - Poor text/background contrast that makes text hard to read
@@ -788,7 +789,7 @@ Format: [{"issue_id": "UX-XXX", "confidence": "high"|"medium", "evidence": "max 
       try {
         const parsed = JSON.parse(raw.trim());
         if (Array.isArray(parsed)) return parsed;
-      } catch {}
+      } catch { }
 
       // try markdown code block
       const codeBlock = raw.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/);
@@ -796,7 +797,7 @@ Format: [{"issue_id": "UX-XXX", "confidence": "high"|"medium", "evidence": "max 
         try {
           const parsed = JSON.parse(codeBlock[1]);
           if (Array.isArray(parsed)) return parsed;
-        } catch {}
+        } catch { }
       }
 
       // try generic first array
@@ -805,7 +806,7 @@ Format: [{"issue_id": "UX-XXX", "confidence": "high"|"medium", "evidence": "max 
         try {
           const parsed = JSON.parse(arrayMatch[0]);
           if (Array.isArray(parsed)) return parsed;
-        } catch {}
+        } catch { }
       }
 
       // partial recovery of individual objects
@@ -862,74 +863,35 @@ export function buildCompanyGroundedMessages(
   goal: string,
   retrievedIssues: RetrievedIssue[],
   suppressedIssues?: Array<{ issue: RetrievedIssue; reason: string }>,
+  // Optional context forwarded from the API route for richer prompt building
+  options?: {
+    siteType?: string;
+    applicableCount?: number;
+    screenshotCount?: number;
+  },
 ): PromptMessage[] {
-  const systemPrompt = `You are a UX Auditor for Digital of Things.
+  // â”€â”€ Detect site type if not supplied â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // The caller may pass siteType already derived from the crawl; if not, we
+  // infer a lightweight version from the URL alone so the prompt is always
+  // context-aware.
+  const siteType = options?.siteType ?? detectSiteType("", url).type ?? "ecommerce";
+  const applicableCount = options?.applicableCount ?? retrievedIssues.length;
+  const screenshotCount = options?.screenshotCount ?? 0;
 
-Generate a FIRST-DRAFT UX AUDIT.
-This is an experience-level assessment, not a checklist.
+  // â”€â”€ Dynamic system prompt (no hardcoded issue IDs or thresholds) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const systemPrompt = buildDynamicSystemPrompt({
+    siteType,
+    retrievedIssues,
+    applicableCount,
+    screenshotCount,
+    url,
+    goal,
+  });
 
-RULES
-- First, identify the **site type** based on the URL, goal, crawl excerpts, and any screenshots. Classify as one of: e‑commerce, real estate, SaaS/web application, content/media, documentation/help, or corporate/marketing. Use appropriate terminology throughout (e.g. "Property Listings" not "PLP" for real estate) and only flag issues that apply to that site type. Non‑ecommerce sites should exclude cart/checkout-specific issues and translate "product/cart/checkout" language to their equivalent (property, article, service, inquiry form, etc.).
-- Evidence hierarchy (STRICT – screenshots always win):
-- 1) Screenshots (PRIMARY – most reliable; use for cart, checkout, PDP whenever provided). 2) Crawl (SECONDARY – often incomplete or blocked on cart/checkout). 3) RAG only to label what you see. 4) No inference without evidence.
-- SCREENSHOTS OVER CRAWL: When the user provides screenshots, treat them as the main source of truth; crawl often fails on cart/checkout. For any page visible in screenshots, base findings on screenshots only. ONLY ACTUALLY-PRESENT ISSUES: Include in the report ONLY issues for which you see direct evidence in screenshots or crawl; omit any RAG issue you do not see evidence for. You may reference UX issues from the context only when you have observed evidence for them.
-- Screenshots override crawl: if screenshots show something (e.g. checkout), do not treat its absence in crawl as a failure. Ground every finding in observable signals; if you cannot see it, do not include it.
-- Ground findings in observable interface signals from screenshots and SITE CRAWL EXCERPTS; if uncertain, label “Needs verification”.
-- Never fabricate analytics, user quotes, or test results.
-- Never claim that users “cannot” complete a task (e.g. purchase, checkout, add to cart) unless there is direct, observable evidence of a blocking error state in the crawl or screenshots.
-- If a state depends on a prerequisite action that the crawl cannot perform (e.g. adding to cart, logging in, submitting forms, completing checkout), treat it as: “Not observable via crawl – Requires manual verification”.
-- Do NOT treat an empty cart as a UX issue if no product was added in the crawl context.
-- **STRICT UNICITY RULE: Each Library Issue ID (UX-###) can only be included ONCE in the entire report.** This is a hard constraint. If an issue (like UX-052) applies to multiple stages, you MUST include it in the ONE stage where the evidence is strongest. Never repeat a Library ID in different sections; it makes the audit look like padding rather than analysis.
-- **POST-WRITE SELF-AUDIT**: After you draft the three journey sections, reread your own text and **remove any repeated UX-### lines**. Only the first mention counts; if you see the same ID appear again elsewhere, edit that section to eliminate the duplicate (move the discussion or note “see earlier”).
-- **STAGE ACCURACY**: Place issues in the journey section that matches the **evidence location**, not where the issue is generically tagged.  A checkout/payment problem must appear under Book (or Decide if it’s on a PDP) – do NOT slip it into Discover just because the URL originated there.  Misplacement undermines the audit clarity.
-- **ID MATCHING: Before including an issue, double-check that the ID you are assigning actually matches the content of that exact issue in the library. Do not mix up IDs.**
-- **SPECIFIC ID RULES:**
-    - **UX-052 (Multi-step feedback):** Apply ONLY to missing progress indicators or loading states during multi-step checkout journeys (e.g., transition between bag → address → payment). Do NOT apply to micro-interactions like "cart icon counter not updating" or "page feels like a refresh" unless it causes a complete loss of orientation in a multi-step sequence.
-- **If an issue ID appears in the "SUPPRESSED ISSUES" list below, it MUST NOT be included in the Discover, Decide, or Book sections. It ONLY belongs in the "Suppressed Issues (Transparency)" section at the very end. Do NOT claim suppressed issues are "not observable" in the main sections; simply omit them from there entirely.**
-- If you include a "Suppressed Issues (Transparency)" section at the end, you must use the exact IDs provided in the "SUPPRESSED ISSUES" context block. Do not say "no issues were suppressed" if a list was provided.
+  // â”€â”€ Dynamic user prompt â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const userPrompt = buildDynamicUserPrompt(url, goal, screenshotCount > 0);
 
-LIBRARY MAPPING (CRITICAL RULE)
-- **MANDATORY ID MAPPING**: Under the "Discover", "Decide", or "Book" sections, EVERY SINGLE Key UX Issue you list MUST be a library issue from the RAG context provided below.
-- Each finding MUST start with a Library ID in the format: **UX-###: [Issue Title]**.
-- **NO FREE-TEXT FINDINGS**: Do NOT invent or describe issues that are not in the library under the main journey sections. If it is not in the library, it is NOT an issue for the main sections. This ensures the audit is grounded in company standards.
-- If you observe a real UX problem that absolutely does not fit any library ID, you MUST place it in a separate section called: “Additional observations (not in library)” and do NOT assign it an ID. If you observe a pattern that significantly disrupts the user journey but has no matching library ID — such as unexpected account merging prompts mid-checkout, third-party redirects, or platform migration banners — include it in Additional observations with a clear description of the friction it creates and its likely conversion impact.
-- **REJECTION RULE**: Any finding in the main journey without a valid library ID will be rejected.
-- If an issue is in the "SUPPRESSED ISSUES" list, DO NOT include it in the main sections.
-
-REASONING LENS
-- Use DOT criteria and Nielsen heuristics qualitatively (not as formulas).
-
-OUTPUT
-- Organize by journey stages (Discover → Decide → Book).
-- Explain dominant experience patterns and implications for where UX should focus next.
-- Be substantially detailed: for each stage, include at least 1 dominant pattern + 3+ issues if the context supports it.
-- For each issue, include: Evidence (page + signal), User impact, and Why it matters.
-- Avoid design/implementation prescriptions; focus on diagnosis and implications.
-- End with: "Where a manual UX audit should focus next"
-- After that, if suppressed issues were provided in the context, add a "Suppressed Issues (Transparency)" section listing which issues were filtered out and why (e.g., "UX-102: Phone country code doesn't match selected country — +971 correct for UAE context"). This builds auditability and trust.`;
-
-  const userPrompt = `Audit the following website using the provided UX Issue Patterns and DOT reasoning lens.
-
-URL: ${url}
-Primary goal: ${goal}
-
-Instructions:
-- Create an experience-led audit. Include ONLY issues you actually see in the evidence (screenshots first, then crawl). Omit any RAG issue you do not see evidence for.
-- **STRICT ID RULE: You must ONLY use issue IDs that exist in the RAG context provided below. Do not approximate or hallucinate IDs. If a finding doesn't match a library ID, put it in "Additional observations (not in library)".**
-- Prioritise screenshot evidence over crawl: for cart, checkout, PDP, and any page shown in screenshots, use what the screenshots show; crawl is secondary and often wrong for those pages.
-- Separate confirmed (visible in evidence) vs needs verification only when you have partial evidence.
-- Do not list issues that are not observable in the provided screenshots or crawl excerpts. If evidence is missing for an issue, omit that issue; do not list it. Use and cite evidence from screenshots and SITE CRAWL EXCERPTS. If evidence is missing, mark “Needs verification”.
-- If screenshots clearly show a later-stage UI (e.g. PDP with pricing/stock, or a rendered checkout with order summary and payment methods), treat that stage as observable and do NOT infer that it is “missing” or “broken”.
-- Aim to cover the key paths: home → category → product → cart → checkout (when present in crawl).
-- For cart/checkout and any action-dependent flows (add-to-cart, form submission, authentication), if the crawl cannot actually perform the action, avoid strong failure language and instead say “Not observable via crawl – Requires manual verification”.
-- End with: “Where a manual UX audit should focus next”`;
-
-  const contextJson = JSON.stringify(
-    { "Context: Retrieved UX Issue Patterns (STRICT LIST - use ONLY these IDs)": retrievedIssues },
-    null,
-    2,
-  );
-
+  // â”€â”€ Suppressed issues transparency block â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   let suppressedSection = "";
   if (suppressedIssues && suppressedIssues.length > 0) {
     const suppressedSummary = suppressedIssues
@@ -938,43 +900,58 @@ Instructions:
     suppressedSection = `\n\n---\nSUPPRESSED ISSUES (IMPORTANT: DO NOT include these IDs in your journey findings):\nThe following issues were considered but were suppressed by the validation logic. Do NOT include them in the Discover, Decide, or Book sections.\n\n${suppressedSummary}\n\nList these exactly as shown above in a section at the very end of your report titled "Suppressed Issues (Transparency)". Do not claim the list is empty or invalid.\n---\n`;
   }
 
+  // â”€â”€ RAG context block â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // The full issue objects are still passed as JSON so the LLM can reference
+  // any field not already rendered in the system prompt (e.g. acceptance_criteria).
+  const contextJson = JSON.stringify(
+    { "Context: Retrieved UX Issue Patterns (STRICT LIST - use ONLY these IDs)": retrievedIssues },
+    null,
+    2,
+  );
+
   return [
     { role: "system", content: systemPrompt },
     { role: "user", content: userPrompt },
-    { role: "user", content: `RAG context – use ONLY the IDs provided in this list; omit any issue you do not see in evidence:\n${contextJson}${suppressedSection}` },
+    { role: "user", content: `RAG context â€“ use ONLY the IDs provided in this list; omit any issue you do not see in evidence:\n${contextJson}${suppressedSection}` },
   ];
 }
+
+// â”€â”€â”€ LEGACY stub kept for the old static implementation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Previously this function contained a ~1000-word hardcoded system prompt.
+// That has been replaced by buildDynamicSystemPrompt() in prompts.ts.
+// The function signature is unchanged so route.ts requires no edits.
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function buildGenericMessages(
   url: string,
   goal: string,
 ): PromptMessage[] {
   const systemPrompt = `You are an AI UX expert.
-Generate a first-draft UX audit for a transactional/e-commerce website using general UX heuristics.  If the evidence indicates a non-ecommerce site (real estate, content, SaaS, documentation, or corporate), adapt terminology and focus accordingly (e.g. replace "product/PLP/PDP" with appropriate equivalents and omit cart/checkout issues).
+Generate a first - draft UX audit for a transactional / e - commerce website using general UX heuristics.If the evidence indicates a non-ecommerce site(real estate, content, SaaS, documentation, or corporate), adapt terminology and focus accordingly(e.g.replace "product/PLP/PDP" with appropriate equivalents and omit cart / checkout issues).
 Do not assume access to analytics or user testing.
 Organize findings by user journey.
 
-REQUIREMENTS
-- Evidence hierarchy (STRICT): 1) Screenshots (PRIMARY). 2) Crawl (SECONDARY; often fails on cart/checkout). Only include issues you see in evidence; omit the rest. SCREENSHOTS OVER CRAWL.
-- Use evidence from screenshots and SITE CRAWL EXCERPTS when making a “Confirmed” claim.
+  REQUIREMENTS
+  - Evidence hierarchy(STRICT): 1) Screenshots(PRIMARY). 2) Crawl(SECONDARY; often fails on cart / checkout). Only include issues you see in evidence; omit the rest.SCREENSHOTS OVER CRAWL.
+- Use evidence from screenshots and SITE CRAWL EXCERPTS when making a â€œConfirmedâ€ claim.
 - If crawl suggests absence but screenshots show presence, let the screenshots win.
-- Be substantially detailed: for each stage (Discover/Decide/Book), include 1 dominant pattern + 3+ issues if evidence supports it.
-- For each issue, include: Evidence (page + signal), User impact, and Why it matters.
-- If evidence is missing or ambiguous, label “Needs verification” and say what would need checking.
+- Be substantially detailed: for each stage(Discover / Decide / Book), include 1 dominant pattern + 3 + issues if evidence supports it.
+- For each issue, include: Evidence(page + signal), User impact, and Why it matters.
+- If evidence is missing or ambiguous, label â€œNeeds verificationâ€ and say what would need checking.
 - Do NOT treat an empty cart as a UX issue if there is no evidence that a product was added.
 - Do NOT infer broken checkout, payment failure, or purchase impossibility unless an explicit blocking error state is visible in the crawl or screenshots.
-- For any flow that depends on actions that the crawl cannot perform (adding items, logging in, submitting forms, completing checkout), explicitly mark findings as “Not observable via crawl – Requires manual verification” rather than stating that the flow is broken.`;
+- For any flow that depends on actions that the crawl cannot perform(adding items, logging in, submitting forms, completing checkout), explicitly mark findings as â€œNot observable via crawl â€“ Requires manual verificationâ€ rather than stating that the flow is broken.`;
 
   const userPrompt = `Audit the following website.
 
-URL: ${url}
-Primary goal: ${goal}
+  URL: ${ url }
+Primary goal: ${ goal }
 
-Generate a first-draft UX audit that a UX team could review. Include only issues you observe in the evidence (screenshots first, then crawl); omit any issue you do not see.
+Generate a first - draft UX audit that a UX team could review.Include only issues you observe in the evidence(screenshots first, then crawl); omit any issue you do not see.
 
-Note: This generic mode does NOT use the company UX issue library, so issues will not have library IDs.
+  Note: This generic mode does NOT use the company UX issue library, so issues will not have library IDs.
 
-At the end of the report, add a short “Coverage & Limitations” note that explains that action-dependent flows (add-to-cart, authentication, checkout, payments) could not be directly exercised by the automated crawl, and therefore must be treated as “Not observable via crawl – Requires manual verification”.`;
+At the end of the report, add a short â€œCoverage & Limitationsâ€ note that explains that action - dependent flows(add - to - cart, authentication, checkout, payments) could not be directly exercised by the automated crawl, and therefore must be treated as â€œNot observable via crawl â€“ Requires manual verificationâ€.`;
 
   return [
     { role: "system", content: systemPrompt },
@@ -984,7 +961,7 @@ At the end of the report, add a short “Coverage & Limitations” note that exp
 
 export function formatMessagesForResponses(messages: PromptMessage[]): string {
   return messages
-    .map((m) => `${m.role.toUpperCase()}:\n${m.content}\n`)
+    .map((m) => `${ m.role.toUpperCase() }: \n${ m.content } \n`)
     .join("\n");
 }
 
@@ -1015,87 +992,89 @@ export async function validateIssuesWithLLM(
   if (imageDetected && imageDetected.length > 0) {
     imageDetectedBlock = `
 
-Image-detection pass results (treat as strong positive evidence — only suppress if you see an explicit counter-signal):
-${imageDetected.map((r) => `- ${r.issue_id}: This issue was confirmed by direct visual inspection of screenshot [${r.screenshot_index}]. Evidence: ${r.evidence_summary}. Treat this as strong positive evidence. Only suppress if you see an explicit counter-signal.`).join("\n")}
+Image - detection pass results(treat as strong positive evidence â€” only suppress if you see an explicit counter - signal):
+${ imageDetected.map((r) => `- ${r.issue_id}: This issue was confirmed by direct visual inspection of screenshot [${r.screenshot_index}]. Evidence: ${r.evidence_summary}. Treat this as strong positive evidence. Only suppress if you see an explicit counter-signal.`).join("\n") }
 `;
   }
 
-  const validationPrompt = `You are validating UX issues against evidence. Evaluate SCREENSHOTS and CRAWL as INDEPENDENT sources. An issue should be included if EITHER source provides evidence.
+  const validationPrompt = `You are validating UX issues against evidence.Evaluate SCREENSHOTS and CRAWL as INDEPENDENT sources.An issue should be included if EITHER source provides evidence.
 
-URL: ${url}
-Goal: ${goal}
+  URL: ${ url }
+Goal: ${ goal }
 
-Evidence sources (evaluate separately):
-${hasScreenshots ? `SCREENSHOTS (primary evidence - evaluate independently):\n${screenshotText}\n` : "SCREENSHOTS: None provided\n"}
-${hasCrawl ? `CRAWL EXCERPTS (secondary evidence - evaluate independently):\n${crawlExcerpts}\n` : "CRAWL EXCERPTS: None available (may be blocked)\n"}
-${imageDetectedBlock}
+Evidence sources(evaluate separately):
+${ hasScreenshots ? `SCREENSHOTS (primary evidence - evaluate independently):\n${screenshotText}\n` : "SCREENSHOTS: None provided\n" }
+${ hasCrawl ? `CRAWL EXCERPTS (secondary evidence - evaluate independently):\n${crawlExcerpts}\n` : "CRAWL EXCERPTS: None available (may be blocked)\n" }
+${ imageDetectedBlock }
 
 Issues to validate:
-${JSON.stringify(issues.map((i) => ({
+${
+  JSON.stringify(issues.map((i) => ({
     issue_id: i.issue_id,
     issue_title: i.issue_title,
     page_type: i.page_type,
     signals_to_detect: i.signals_to_detect,
     negative_signals: (i as any).negative_signals,
     context_notes: (i as any).context_notes,
-  })), null, 2)}
+  })), null, 2)
+}
 
 For EACH issue, return a JSON object with:
 {
   "issue_id": "...",
-  "positive_signals_in_screenshots": ["signal1"], // Positive signals found in SCREENSHOTS (empty array [] if none — never omit this field)
-  "positive_signals_in_crawl": ["signal2"],       // Positive signals found in CRAWL (empty array [] if none or crawl blocked — never omit this field)
-  "positive_signals_confirmed": ["signal1", "signal2"], // Combined: signals from EITHER source
-  "negative_signals_confirmed": ["signal1"], // Negative signals found in EITHER source (suppresses issue)
-  "evidence_is_conditional": true/false,
-  "page_type_mismatch": true/false,
-  "include": true/false,
-  "suppression_reason": "..."
+    "positive_signals_in_screenshots": ["signal1"], // Positive signals found in SCREENSHOTS (empty array [] if none â€” never omit this field)
+      "positive_signals_in_crawl": ["signal2"],       // Positive signals found in CRAWL (empty array [] if none or crawl blocked â€” never omit this field)
+        "positive_signals_confirmed": ["signal1", "signal2"], // Combined: signals from EITHER source
+          "negative_signals_confirmed": ["signal1"], // Negative signals found in EITHER source (suppresses issue)
+            "evidence_is_conditional": true / false,
+              "page_type_mismatch": true / false,
+                "include": true / false,
+                  "suppression_reason": "..."
 }
 
-RULES — apply in this exact order:
+RULES â€” apply in this exact order:
 
-1. ZERO-EVIDENCE HARD RULE:
-   If positive_signals_in_screenshots is [] AND positive_signals_in_crawl is [] → set include: false.
+1. ZERO - EVIDENCE HARD RULE:
+   If positive_signals_in_screenshots is[] AND positive_signals_in_crawl is[] â†’ set include: false.
    This rule has NO exceptions, even if the issue sounds plausible.
 
 2. CONDITIONAL EVIDENCE RULE:
-   Evidence must describe what IS currently visible — not what might be true or what could happen.
-   If the only evidence you can state contains words like "if", "may", "might", "could", "would", "will", "not visible", "not observable", "warrants review", "requires further verification", "blurred", "truncated", "not directly observable", "could be construed as", or is written in future tense ("will", "would") → set evidence_is_conditional: true.
-   A -0.25 penalty will be applied to the confidence score, which will likely suppress the issue.
-   Example of bad (conditional) evidence: "If future form fields are not grouped, users may struggle."
-   Example of good (observable) evidence: "Form fields for billing/shipping are rendered without visible grouping labels."
+   Evidence must describe what IS currently visible â€” not what might be true or what could happen.
+   If the only evidence you can state contains words like "if", "may", "might", "could", "would", "will", "not visible", "not observable", "warrants review", "requires further verification", "blurred", "truncated", "not directly observable", "could be construed as", or is written in future tense("will", "would") â†’ set evidence_is_conditional: true.
+  A - 0.25 penalty will be applied to the confidence score, which will likely suppress the issue.
+   Example of bad(conditional) evidence: "If future form fields are not grouped, users may struggle."
+   Example of good(observable) evidence: "Form fields for billing/shipping are rendered without visible grouping labels."
 
-3. PAGE-TYPE STAGE MISMATCH RULE (RELAXED):
-   Valid UX issues often bridge stages. While page_type (e.g. ["checkout"]) is a guide, it is NOT an absolute gate.
-   - If EVIDENCE (screenshots/crawl) clearly shows a library issue happening on a page that isn't strictly tagged in the library page_type, you SHOULD still include it.
-   - Example: PDP issues (like UX-003 CTA overload) should be included even if the primary path is checkout, provided you can see it in provided PDP screenshots.
-   - ONLY set page_type_mismatch: true if the issue is physically impossible at that stage (e.g., a "shipping cost" issue on a "home page" with no products).
+3. PAGE - TYPE STAGE MISMATCH RULE(RELAXED):
+   Valid UX issues often bridge stages.While page_type(e.g. ["checkout"]) is a guide, it is NOT an absolute gate.
+   - If EVIDENCE(screenshots / crawl) clearly shows a library issue happening on a page that isn't strictly tagged in the library page_type, you SHOULD still include it.
+  - Example: PDP issues(like UX-003 CTA overload) should be included even if the primary path is checkout, provided you can see it in provided PDP screenshots.
+   - ONLY set page_type_mismatch: true if the issue is physically impossible at that stage(e.g., a "shipping cost" issue on a "home page" with no products).
 
 4. ABSENCE IS EVIDENCE RULE:
-   For certain issues the *absence* of a feature is itself the positive signal. UX-040 (Security reassurance) is one example – if you are on a checkout page and see **no** trust badges, that **is** evidence that the issue applies. Another classic case is UX-052 (multi‑step feedback): if you are stepped through several checkout screens and there is **no progress indicator or step counter anywhere**, that absence is the evidence. Do NOT treat these as "zero evidence" and suppress them; instead record the missing element as the positive finding.
-   - If you are on SS3 (Checkout) and see NO trust badges, this confirms UX-040. Do NOT suppress for "no evidence".
+   For certain issues the * absence * of a feature is itself the positive signal.UX-040(Security reassurance) is one example â€“ if you are on a checkout page and see ** no ** trust badges, that ** is ** evidence that the issue applies.Another classic case is UX-052(multiâ€‘step feedback): if you are stepped through several checkout screens and there is ** no progress indicator or step counter anywhere **, that absence is the evidence.Do NOT treat these as "zero evidence" and suppress them; instead record the missing element as the positive finding.
+   - If you are on SS3(Checkout) and see NO trust badges, this confirms UX-040.Do NOT suppress for "no evidence".
 
-5. FORM AWARENESS RULE (Transparency):
-   For field-related issues like UX-102 (Phone/Country code), if SS5 shows a phone field, you cannot suppress for "no evidence". If you see a field, you must investigate it. If you cannot see the detail, mark "Needs verification" rather than suppressing.
+5. FORM AWARENESS RULE(Transparency):
+   For field - related issues like UX - 102(Phone / Country code), if SS5 shows a phone field, you cannot suppress for "no evidence".If you see a field, you must investigate it.If you cannot see the detail, mark "Needs verification" rather than suppressing.
 
 6. NEGATIVE SIGNALS:
-   Only treat a negative signal as a suppression trigger if it represents **clear,
-   positive evidence** that the issue is not present. For example, seeing a
-   visible trust badge or an explicit “Continue as Guest” button counts; a
-   vague marketing header like “Secure Checkout” does *not*. If a negative
-   signal seems ambiguous or you are unsure, ignore it (do not suppress).
+   Only treat a negative signal as a suppression trigger if it represents ** clear,
+  positive evidence ** that the issue is not present.For example, seeing a
+   visible trust badge or an explicit â€œContinue as Guestâ€ button counts; a
+   vague marketing header like â€œSecure Checkoutâ€ does * not *.If a negative
+   signal seems ambiguous or you are unsure, ignore it(do not suppress).
 
-5. SIGNALS MATCHING (STRICT):
+5. SIGNALS MATCHING(STRICT):
    An issue should only be included if the positive signals you observe match the specific intent of the 'signals_to_detect'.
-   - For UX-052 (Multi-step feedback): Only include if you observe missing PROGRESS INDICATORS or STEP-BY-STEP loaders in a sequence. Do NOT include for simple cart icon updates or page refreshes.
+   - For UX-052(Multi - step feedback): Only include if you observe missing PROGRESS INDICATORS or STEP - BY - STEP loaders in a sequence.Do NOT include for simple cart icon updates or page refreshes.
 
-6. SELF-CONTRADICTION RULE:
+6. SELF - CONTRADICTION RULE:
    If your evidence statement admits that the issue might not be applicable or that it's "not in direct competition" (see UX-003 context), you MUST set include: false.
 
-CRITICAL: Screenshots are FIRST-CLASS evidence. Only suppress if ALL applicable rules above require it. No "if" words in evidence unless evidence_is_conditional: true.
+CRITICAL: Screenshots are FIRST - CLASS evidence.Only suppress if ALL applicable rules above require it.No "if" words in evidence unless evidence_is_conditional: true.
 
-Return ONLY a JSON array of these objects, one per issue. No other text.`;
+Return ONLY a JSON array of these objects, one per issue.No other text.`;
 
   try {
     let validationResponse: string;
@@ -1132,7 +1111,7 @@ Return ONLY a JSON array of these objects, one per issue. No other text.`;
       const openRouterResp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${apiKey}`,
+          "Authorization": `Bearer ${ apiKey } `,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -1171,7 +1150,7 @@ Return ONLY a JSON array of these objects, one per issue. No other text.`;
       }
     }
 
-    // ── FIX 1: Hard zero-evidence gate (programmatic, overrides LLM) ─────────
+    // â”€â”€ FIX 1: Hard zero-evidence gate (programmatic, overrides LLM) â”€â”€â”€â”€â”€â”€â”€â”€â”€
     for (const v of validations) {
       const screenshotSignals = v.positive_signals_in_screenshots ?? [];
       const crawlSignals = v.positive_signals_in_crawl ?? [];
@@ -1194,7 +1173,7 @@ Return ONLY a JSON array of these objects, one per issue. No other text.`;
 
       if (screenshotSignals.length === 0 && crawlSignals.length === 0 && !isAbsenceIssue) {
         if (v.include) {
-          console.log(`[Validation] FIX-1 override: forcing include=false for ${v.issue_id} (zero evidence in both sources)`);
+          console.log(`[Validation] FIX - 1 override: forcing include = false for ${ v.issue_id }(zero evidence in both sources)`);
         }
         v.include = false;
         if (!v.suppression_reason) {
@@ -1203,7 +1182,7 @@ Return ONLY a JSON array of these objects, one per issue. No other text.`;
       }
     }
 
-    // ── FIX 0: ensure suppressions carry a concrete reason ──────────────────
+    // â”€â”€ FIX 0: ensure suppressions carry a concrete reason â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // If the LLM gave us a blanket "exclude" with no real explanation, we
     // prefer to err on the side of inclusion.  A proper reason should mention
     // crawl or screenshot evidence (or lack thereof) and be at least a
@@ -1225,7 +1204,7 @@ Return ONLY a JSON array of these objects, one per issue. No other text.`;
       }
     }
 
-    // ── FIX 2: Conditional evidence programmatic penalty ──────────────────────
+    // â”€â”€ FIX 2: Conditional evidence programmatic penalty â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const CONDITIONAL_PATTERNS = /\b(if|may|might|could|would|will|not visible|not observable|future|potentially|possibly|perhaps|unclear|unknown|warrants review|requires further verification|blurred|truncated|not directly observable|could be construed as)\b/i;
     for (const v of validations) {
       if (!v.evidence_is_conditional) {
@@ -1242,7 +1221,7 @@ Return ONLY a JSON array of these objects, one per issue. No other text.`;
             // Don't mark as conditional if the thing that's "not visible" is trust badges for UX-040
             continue;
           }
-          console.log(`[Validation] FIX-2 override: marking evidence_is_conditional=true for ${v.issue_id}`);
+          console.log(`[Validation] FIX - 2 override: marking evidence_is_conditional = true for ${ v.issue_id }`);
           v.evidence_is_conditional = true;
         }
       }
@@ -1258,7 +1237,7 @@ Return ONLY a JSON array of these objects, one per issue. No other text.`;
       for (const item of imageDetected) {
         imageConfirmedIds.add(item.issue_id);
       }
-      console.log(`[Validation] BUG FIX 3: Marking ${imageConfirmedIds.size} issues as imageConfirmed: ${Array.from(imageConfirmedIds).join(", ")}`);
+      console.log(`[Validation] BUG FIX 3: Marking ${ imageConfirmedIds.size } issues as imageConfirmed: ${ Array.from(imageConfirmedIds).join(", ") } `);
     }
 
     // Track which evidence sources were available
@@ -1268,7 +1247,7 @@ Return ONLY a JSON array of these objects, one per issue. No other text.`;
     for (let i = 0; i < issues.length; i++) {
       const issue = issues[i];
       const isImageConfirmed = issue.issue_id ? imageConfirmedIds.has(issue.issue_id) : false;
-      
+
       // Try to match by issue_id first (more reliable), fall back to index
       const validation = validations.find((v) => v.issue_id === issue.issue_id) ?? validations[i];
       if (!validation) {
@@ -1276,11 +1255,11 @@ Return ONLY a JSON array of these objects, one per issue. No other text.`;
         continue;
       }
 
-      // BUG FIX 3: Page-type stage mismatch – suppress before anything else ──────
+      // BUG FIX 3: Page-type stage mismatch â€“ suppress before anything else â”€â”€â”€â”€â”€â”€
       if ((validation as any).page_type_mismatch === true) {
         suppressed.push({
           issue,
-          reason: validation.suppression_reason || `Stage mismatch: issue page_type [${(issue.page_type ?? []).join(", ")}] does not match the stage of the observed evidence`,
+          reason: validation.suppression_reason || `Stage mismatch: issue page_type[${ (issue.page_type ?? []).join(", ") }] does not match the stage of the observed evidence`,
         });
         continue;
       }
@@ -1295,7 +1274,7 @@ Return ONLY a JSON array of these objects, one per issue. No other text.`;
       if (issue.issue_id === "UX-040") {
         // if the model didn't point to any badges or give strong negative
         // signals (and we didn't downgrade them to weak), then we must still
-        // surface the issue – absence is evidence.
+        // surface the issue â€“ absence is evidence.
         if (!hasAnyPositiveEvidence && !hasNegativeEvidence) {
           console.log("[Validation] overriding UX-040 include=true due to absence rule");
           validation.include = true;
@@ -1314,7 +1293,7 @@ Return ONLY a JSON array of these objects, one per issue. No other text.`;
         }
       }
 
-      // ── FIX 4: Guard against weak/ambiguous negative evidence ──────────────
+      // â”€â”€ FIX 4: Guard against weak/ambiguous negative evidence â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       if (hasNegativeEvidence) {
         const negs = validation.negative_signals_confirmed ?? [];
         const weakPatternsByIssue: { [id: string]: RegExp[] } = {
@@ -1340,7 +1319,7 @@ Return ONLY a JSON array of these objects, one per issue. No other text.`;
 
         if (treatAsWeak) {
           console.log(
-            `[Validation] Ignoring weak negative evidence for ${issue.issue_id}: ${negs.join(", ")}`,
+            `[Validation] Ignoring weak negative evidence for ${ issue.issue_id }: ${ negs.join(", ") } `,
           );
           hasNegativeEvidence = false; // pretend it never happened
         }
@@ -1349,7 +1328,7 @@ Return ONLY a JSON array of these objects, one per issue. No other text.`;
       if (hasNegativeEvidence) {
         suppressed.push({
           issue,
-          reason: validation.suppression_reason || `Negative signals confirmed: ${validation.negative_signals_confirmed.join(", ")}`,
+          reason: validation.suppression_reason || `Negative signals confirmed: ${ validation.negative_signals_confirmed.join(", ") } `,
         });
         continue;
       }
@@ -1366,13 +1345,13 @@ Return ONLY a JSON array of these objects, one per issue. No other text.`;
       if (hasNegativeEvidence) {
         suppressed.push({
           issue,
-          reason: validation.suppression_reason || `Negative signals confirmed: ${validation.negative_signals_confirmed.join(", ")}`,
+          reason: validation.suppression_reason || `Negative signals confirmed: ${ validation.negative_signals_confirmed.join(", ") } `,
         });
         continue;
       }
 
       // Zero-evidence hard rule suppression
-      // SPECIAL-TREAT: UX-102 phone-country mismatch–if we can see any phone or
+      // SPECIAL-TREAT: UX-102 phone-country mismatchâ€“if we can see any phone or
       // country information, the issue deserves manual follow-up rather than
       // being quietly dropped.
       if (issue.issue_id === "UX-102") {
@@ -1395,7 +1374,7 @@ Return ONLY a JSON array of these objects, one per issue. No other text.`;
         if (!hadScreenshots && !hadCrawl) reasonParts.push("no evidence sources available");
         suppressed.push({
           issue,
-          reason: validation.suppression_reason || `No positive signals in ${reasonParts.length > 0 ? reasonParts.join(" or ") : "screenshots or crawl"} (zero-evidence hard rule)`,
+          reason: validation.suppression_reason || `No positive signals in ${ reasonParts.length > 0 ? reasonParts.join(" or ") : "screenshots or crawl" } (zero - evidence hard rule)`,
         });
         continue;
       }
@@ -1408,7 +1387,7 @@ Return ONLY a JSON array of these objects, one per issue. No other text.`;
         if (!hadScreenshots && !hadCrawl) reasonParts.push("no evidence sources available");
         suppressed.push({
           issue,
-          reason: validation.suppression_reason || `No evidence in ${reasonParts.length > 0 ? reasonParts.join(" or ") : "screenshots or crawl"}`,
+          reason: validation.suppression_reason || `No evidence in ${ reasonParts.length > 0 ? reasonParts.join(" or ") : "screenshots or crawl" } `,
         });
         continue;
       }
@@ -1418,10 +1397,10 @@ Return ONLY a JSON array of these objects, one per issue. No other text.`;
       const penalties = (issue as any).confidence_penalties ?? {};
       let score = baseConf;
 
-      // ── FIX 2: Conditional evidence penalty ───────────────────────────────────
+      // â”€â”€ FIX 2: Conditional evidence penalty â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       if (validation.evidence_is_conditional) {
         const penalty = penalties.uncertainty_stated ?? -0.25;
-        console.log(`[Validation] FIX-2 penalty: ${penalty} applied to ${issue.issue_id} (conditional evidence)`);
+        console.log(`[Validation] FIX - 2 penalty: ${ penalty } applied to ${ issue.issue_id } (conditional evidence)`);
         score += penalty;
       }
 
@@ -1435,32 +1414,32 @@ Return ONLY a JSON array of these objects, one per issue. No other text.`;
       // BUG FIX 3 (REVISED): Only override for imageConfirmed if score >= 0.50
       // Image pass retrieval is guaranteed (Bug 2), but inclusion is score-gated
       if (isImageConfirmed && score >= 0.50) {
-        console.log(`[Validation] BUG FIX 3: imageConfirmed ${issue.issue_id} qualifies (score ${score.toFixed(2)} >= 0.50), forcing include`);
+        console.log(`[Validation] BUG FIX 3: imageConfirmed ${ issue.issue_id } qualifies(score ${ score.toFixed(2) } >= 0.50), forcing include`);
         validation.include = true;
       } else if (isImageConfirmed && score < 0.50) {
-        console.log(`[Validation] BUG FIX 3: imageConfirmed ${issue.issue_id} rejected (score ${score.toFixed(2)} < 0.50), respecting suppression`);
+        console.log(`[Validation] BUG FIX 3: imageConfirmed ${ issue.issue_id } rejected(score ${ score.toFixed(2) } < 0.50), respecting suppression`);
       }
 
       // Gate: include if score >= 0.55 AND validation says include
       // BUG FIX 3: imageConfirmed issues bypass score threshold only if already forced include above
       if (validation.include && score >= 0.55) {
-        console.log(`[Validation]${isImageConfirmed ? " [imageConfirmed]" : ""} Including ${issue.issue_id} (score ${score.toFixed(2)})`);
+        console.log(`[Validation]${ isImageConfirmed ? " [imageConfirmed]" : "" } Including ${ issue.issue_id } (score ${ score.toFixed(2) })`);
         validated.push(issue);
       } else {
         suppressed.push({
           issue,
-          reason: validation.suppression_reason || `Score ${score.toFixed(2)} below threshold 0.55${validation.evidence_is_conditional ? " (conditional evidence penalty applied)" : ""}${(!validation.include ? " (LLM excluded)" : "")}`,
+          reason: validation.suppression_reason || `Score ${ score.toFixed(2) } below threshold 0.55${ validation.evidence_is_conditional ? " (conditional evidence penalty applied)" : "" }${ (!validation.include ? " (LLM excluded)" : "") } `,
         });
       }
     }
 
-    // ── FIX 5: Deduplicate the final validated list (unmatched IDs lead to duplicates in report)
+    // â”€â”€ FIX 5: Deduplicate the final validated list (unmatched IDs lead to duplicates in report)
     const uniqueValidated: RetrievedIssue[] = [];
     const seenIds = new Set<string>();
     for (const issue of validated) {
       if (issue.issue_id) {
         if (seenIds.has(issue.issue_id)) {
-          console.log(`[Validation] Deduping validated issue_id ${issue.issue_id}`);
+          console.log(`[Validation] Deduping validated issue_id ${ issue.issue_id } `);
           continue;
         }
         seenIds.add(issue.issue_id);

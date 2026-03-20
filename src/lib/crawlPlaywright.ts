@@ -1,4 +1,4 @@
-﻿// universal crawler using playwright-extra + manual stealth
+// universal crawler using playwright-extra + manual stealth
 
 // @ts-expect-error: missing playwright types in this workspace
 import { chromium } from 'playwright-extra';
