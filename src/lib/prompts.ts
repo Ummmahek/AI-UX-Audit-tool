@@ -1,177 +1,139 @@
 import { type Issue } from "./ux";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// buildDynamicSystemPrompt
-//
-// Builds the system prompt for the main audit LLM call dynamically from the
-// retrieved issue library.  Each issue's signals_to_detect, negative_signals,
-// visual_confirmation_required, and page_type are injected at runtime — nothing
-// is hardcoded.  The caller supplies all variable data; the prompt just formats
-// it into structured instructions for the model.
-// ─────────────────────────────────────────────────────────────────────────────
+export function buildDynamicSystemPrompt(context: {
+  siteType: string;
+  retrievedIssues: Issue[];
+  applicableCount: number;
+  screenshotCount: number;
+  url: string;
+  goal: string;
+  crawlSuccess: boolean;
+}) {
+  
+  // Calculate minimums
+  let minIssues: number;
+  if (context.crawlSuccess) {
+    minIssues = Math.max(20, Math.floor(context.retrievedIssues.length * 0.5));
+  } else if (context.screenshotCount > 0) {
+    minIssues = Math.max(15, context.screenshotCount * 4);
+  } else {
+    minIssues = 5;
+  }
+  
+  const maxIssues = Math.floor(minIssues * 1.6);
 
-export interface DynamicPromptContext {
-    siteType: string;
-    retrievedIssues: Issue[];
-    applicableCount: number;
-    screenshotCount: number;
-    url: string;
-    goal: string;
+  return `You are analyzing ${context.url} (a ${context.siteType} website) for UX issues.
+
+CONTEXT:
+- Site Type: ${context.siteType}
+- Screenshots: ${context.screenshotCount} provided
+- Crawl Data: ${context.crawlSuccess ? 'Available' : 'Limited - rely on screenshots'}
+- Issues to Check: ${context.retrievedIssues.length}
+- Your Goal: ${context.goal}
+
+═══════════════════════════════════════════════════════════════
+ISSUE LIBRARY (${context.retrievedIssues.length} ISSUES TO CHECK)
+═══════════════════════════════════════════════════════════════
+
+${context.retrievedIssues.map((issue, idx) => `
+${idx + 1}. ${issue.issue_id}: ${(issue as any).issue_title || (issue as any).title || 'Untitled'}
+   Severity: ${issue.severity}
+   Page Type: ${Array.isArray(issue.page_type) ? issue.page_type.join(', ') : issue.page_type}
+   Detection: ${(issue as any).detection_type || 'presence'}
+   
+   Signals to Detect:
+${(Array.isArray(issue.signals_to_detect) ? issue.signals_to_detect : []).map((s: string) => `   - ${s}`).join('\n') || '   - Use general UX principles'}
+   
+   Negative Signals (if ANY present, SKIP this issue):
+${(Array.isArray((issue as any).negative_signals) ? (issue as any).negative_signals : []).map((s: string) => `   - ${s}`).join('\n') || '   - None'}
+   
+   User Problem: ${(issue as any).user_problem || "UX consideration"}
+   Fix: ${issue.recommendation}
+`).join('\n')}
+
+═══════════════════════════════════════════════════════════════
+ANALYSIS INSTRUCTIONS
+═══════════════════════════════════════════════════════════════
+
+1. SYSTEMATIC CHECKING
+   Check EVERY issue above systematically:
+   - Read the signals to detect
+   - Look for those signals in screenshots and crawl data
+   - Check for negative signals - if ANY present, skip that issue
+   - If signals found and no negative signals → report it
+
+2. SCREENSHOT ANALYSIS ${context.screenshotCount > 0 ? `(${context.screenshotCount} provided)` : ''}
+   ${context.screenshotCount > 0 ? `
+   Examine each screenshot thoroughly:
+   - Check what's visible: navigation, content, forms, buttons, layout
+   - Look for both presence issues (unwanted elements) AND absence issues (missing elements)
+   - Find 4-5 issues per screenshot minimum
+   - Target: ${Math.floor(context.screenshotCount * 4)} total issues from screenshots
+   
+   Common checks per screenshot:
+   - Navigation: breadcrumbs, search, menu complexity, language selector
+   - Content: contrast, text density, hierarchy, clarity
+   - Forms: labels, grouping, required fields, validation messages
+   - Layout: spacing, alignment, consistency
+   - Information: pricing, contact info, policies, trust signals
+   ` : 'No screenshots provided - use crawl data only'}
+
+3. SITE TYPE AWARENESS
+   This is a ${context.siteType} site:
+   ${context.siteType === 'ecommerce' ? '- Focus on product pages, cart, checkout flow' : ''}
+   ${context.siteType === 'real_estate' ? '- Focus on property listings, forms, contact info, NOT checkout/cart' : ''}
+   ${context.siteType === 'saas' ? '- Focus on signup, dashboard, pricing pages' : ''}
+   ${context.siteType === 'corporate' ? '- Focus on navigation, content clarity, contact forms' : ''}
+   
+   DO NOT report checkout/cart issues unless this is an ecommerce site.
+
+4. EVIDENCE REQUIREMENTS
+   Every finding MUST have specific evidence:
+   ${context.screenshotCount > 0 ? '- Reference screenshot number and element location' : ''}
+   - Example: "Screenshot 2 shows header navigation: no search icon visible"
+   - Example: "Crawl data shows 14 images with missing alt text"
+   - NO vague claims like "site has issues"
+
+5. MINIMUM REQUIREMENTS
+   Find at least ${minIssues} HIGH or MEDIUM confidence issues
+   Maximum ${maxIssues} issues
+   
+   If you're below minimum, re-examine screenshots more carefully.
+
+═══════════════════════════════════════════════════════════════
+REPORT FORMAT
+═══════════════════════════════════════════════════════════════
+
+For each confirmed issue:
+
+**[ISSUE_ID]: [Title from library]**
+
+Detection: present | absent | not applicable
+Confidence: High | Medium | Low
+Evidence: [Screenshot X shows specific element/location: observation] OR [Crawl data shows: finding]
+
+Signals to Detect:
+[List each signal with Present/Not observable/Negative signal found]
+
+User Problem: [From library]
+Recommendation: [From library]
+
+═══════════════════════════════════════════════════════════════
+PRE-SUBMISSION CHECKLIST
+═══════════════════════════════════════════════════════════════
+
+□ Checked all ${context.retrievedIssues.length} issues systematically
+□ Examined all ${context.screenshotCount} screenshots thoroughly
+□ Found at least ${minIssues} HIGH/MEDIUM confidence issues (current count: ___)
+□ Every finding has specific evidence (screenshot X or crawl data)
+□ No checkout/cart issues reported (unless site is ecommerce)
+□ No duplicate issues
+□ Findings are diverse (not all navigation or all forms)
+
+═══════════════════════════════════════════════════════════════
+
+Analyze the site now and report ${minIssues}-${maxIssues} confirmed issues.`;
 }
-
-/**
- * Renders a single issue from the library as a numbered prompt block.
- * Uses the issue's own signals — no hardcoded detection rules.
- */
-function renderEnhancedIssueBlock(issue: Issue, idx: number): string {
-    const signals = Array.isArray((issue as any).signals_to_detect)
-        ? (issue as any).signals_to_detect as string[]
-        : [];
-    const negativeSignals = Array.isArray((issue as any).negative_signals)
-        ? (issue as any).negative_signals as string[]
-        : [];
-    const pageTypes = Array.isArray(issue.page_type)
-        ? issue.page_type.join(", ")
-        : String(issue.page_type ?? "all");
-    const visualRequired = Boolean((issue as any).visual_confirmation_required);
-    
-    const detectionExplain = (issue as any).detection_type === 'absence'
-        ? '⚠️ Flag if signals are MISSING'
-        : '✓ Flag if signals ARE PRESENT';
-    
-    return `${idx + 1}. ${issue.issue_id ?? "??"}: ${issue.issue_title ?? "Untitled"}
-   Severity: ${issue.severity ?? "Unknown"} | Page: ${pageTypes}
-   
-   SIGNALS TO DETECT:
-${signals.length > 0 ? signals.map(s => `   • ${s}`).join('\n') : '   • Use general UX principles'}
-   
-   NEGATIVE SIGNALS (if ANY found, SKIP this issue):
-${negativeSignals.length > 0 ? negativeSignals.map(s => `   • ${s}`).join('\n') : '   • None'}
-   
-   Detection: ${(issue as any).detection_type ?? "presence"} ${detectionExplain}
-   Visual Required: ${visualRequired ? 'YES - must see in screenshot' : 'NO - can infer'}
-   
-   User Problem: ${issue.user_problem ?? ""}
-   Fix: ${issue.recommendation ?? ""}`;
-}
-
-/**
- * Builds a fully dynamic system prompt from the retrieved issue library.
- * The detection methodology is driven entirely by each issue's own signals.
- *
- * Returns a string ready to be used as the "system" message in the LLM call.
- */
-export function buildDynamicSystemPrompt(context: DynamicPromptContext): string {
-    const {
-        siteType,
-        retrievedIssues,
-        applicableCount,
-        screenshotCount,
-        url,
-        goal,
-    } = context;
-
-    // Calculate dynamic minimums
-    const minIssues = Math.floor(context.retrievedIssues.length * 0.5);
-    const maxIssues = Math.floor(context.retrievedIssues.length * 0.8);
-    const perScreenshotMin = Math.floor(context.screenshotCount * 3);
-    const perScreenshotMax = Math.floor(context.screenshotCount * 5);
-    
-    return `You are a UX Auditor for Digital of Things auditing a ${siteType} website.
-
-═══════════════════════════════════════════════════════════════
-AUDIT CONTEXT
-═══════════════════════════════════════════════════════════════
-
-Website: ${url}
-Site Type: ${siteType}
-Goal: ${goal}
-Screenshots: ${screenshotCount}
-Issues to Analyze: ${retrievedIssues.length} (pre-filtered and validated from ${applicableCount} applicable)
-
-═══════════════════════════════════════════════════════════════
-CRITICAL: SYSTEMATIC ANALYSIS REQUIRED
-═══════════════════════════════════════════════════════════════
-
-You MUST evaluate EVERY ONE of the ${retrievedIssues.length} issues below.
-
-For EACH issue:
-1. READ its "SIGNALS TO DETECT"
-2. EXAMINE screenshots/crawl for those signals
-3. CHECK "NEGATIVE SIGNALS" (if any present, skip issue)
-4. DOCUMENT: present / absent / uncertain
-
-MINIMUM REQUIREMENT:
-Find at least ${minIssues} to ${maxIssues} HIGH or MEDIUM confidence issues.
-
-If you find fewer than ${minIssues}, you have NOT been systematic.
-
-═══════════════════════════════════════════════════════════════
-EVIDENCE HIERARCHY
-═══════════════════════════════════════════════════════════════
-
-1. SCREENSHOTS (highest priority)
-   • If visual_confirmation_required = true, MUST see in screenshot
-   
-2. CRAWL DATA (secondary)
-   • DOM structure, text, meta tags
-   
-3. INFERENCE (last resort)
-   • Mark as "Low confidence" or "Requires verification"
-
-═══════════════════════════════════════════════════════════════
-ISSUE LIBRARY (${retrievedIssues.length} ISSUES)
-═══════════════════════════════════════════════════════════════
-
-${retrievedIssues.map((issue, idx) => renderEnhancedIssueBlock(issue, idx)).join('\n\n')}
-
-═══════════════════════════════════════════════════════════════
-SCREENSHOT-BY-SCREENSHOT ANALYSIS (${screenshotCount} SCREENSHOTS)
-═══════════════════════════════════════════════════════════════
-
-For EACH screenshot:
-
-a) Identify page type
-b) Filter applicable issues (by page_type match)
-c) Check EACH applicable issue's signals
-d) Document findings
-
-MINIMUM: ${perScreenshotMin} to ${perScreenshotMax} issues total across all screenshots
-(${screenshotCount > 0 ? Math.floor(perScreenshotMin / screenshotCount) : 0} to ${screenshotCount > 0 ? Math.floor(perScreenshotMax / screenshotCount) : 0} per screenshot)
-
-═══════════════════════════════════════════════════════════════
-PRE-SUBMISSION VALIDATION
-═══════════════════════════════════════════════════════════════
-
-BEFORE finalizing, verify:
-
-□ I evaluated ALL ${retrievedIssues.length} issues
-□ I examined ALL ${screenshotCount} screenshots
-□ I found at least ${minIssues} HIGH/MEDIUM confidence issues
-□ Current count: ___ (must be ≥ ${minIssues})
-□ Findings show diversity (not clustered around one pattern)
-□ Every finding has evidence (screenshot or crawl reference)
-
-If ANY checkbox fails, continue analyzing before finalizing.
-
-═══════════════════════════════════════════════════════════════
-YOUR TASK
-═══════════════════════════════════════════════════════════════
-
-Systematically analyze all ${retrievedIssues.length} issues against 
-${screenshotCount} screenshots and crawl data.
-
-Target: ${minIssues}-${maxIssues} comprehensive findings.
-
-Begin your analysis using the issue library and detection framework above.`;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// buildDynamicUserPrompt
-//
-// The user-turn complement to buildDynamicSystemPrompt.  Kept separate so it
-// can be updated independently from the system prompt.
-// ─────────────────────────────────────────────────────────────────────────────
 
 export function buildDynamicUserPrompt(
     url: string,
