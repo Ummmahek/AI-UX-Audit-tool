@@ -83,7 +83,11 @@ async function extractTextFromScreenshots(files: File[]): Promise<string> {
   return '';
 }
 
-const SAMPLE_REPORT = `Journey summary (sample)
+const SAMPLE_REPORT = `# Sample Website
+**Site Type:** ecommerce
+This is a sample UX audit report showing the expected structure.
+
+## Findings
 - Discover: Homepage uses large hero with competing CTAs. Needs verification: language/location selector hidden in header; pop-ups appear before intent.
 - Decide: Product cards vary in layout, slowing scan. Price/fees are revealed late which likely triggers drop-off.
 - Book: Checkout flow hints at late account creation + coupon chase; may lack progress clarity.
@@ -155,7 +159,7 @@ export async function POST(request: Request) {
                 url,
                 requestedUrl: url,
                 finalUrl: url,
-                excerpt: pwResult.bodyText,
+                excerpt: `URL: ${url}\nTitle: ${pwResult.title}\nVisible text: ${pwResult.bodyText.substring(0, 2000)}`,
                 screenshot: pwResult.screenshots[0] ? `data:image/png;base64,${pwResult.screenshots[0].toString('base64')}` : undefined,
                 label: 'homepage',
               } as any,
@@ -220,6 +224,7 @@ export async function POST(request: Request) {
     let suppressedIssues: Array<{ issue: RetrievedIssue; reason: string }> = [];
     let imageDetectedResults: ImageDetectedResult[] = [];
     let metadata: any = {}; // added for site type/terminology info
+    let resolvedSiteType = 'ecommerce';
 
     if (useCompany) {
       try {
@@ -235,11 +240,12 @@ export async function POST(request: Request) {
         hasScreenshots = allScreenshotUrls.length > 0;
 
         // detect site type EARLY using crawl context/text
-        const siteTypeDetection = detectSiteType(crawlContext, url);
-        console.log(`[API] Site Type: ${siteTypeDetection.type} (${siteTypeDetection.confidence})`);
+        const siteTypeDetectionResult = detectSiteType(crawlContext, url);
+        resolvedSiteType = siteTypeDetectionResult.type;
+        console.log(`[API] Site Type: ${resolvedSiteType} (${siteTypeDetectionResult.confidence})`);
 
         // filter applicable issues before any vision pass
-        const applicableIssues = filterApplicableIssues(issueLibrary, siteTypeDetection.type);
+        const applicableIssues = filterApplicableIssues(issueLibrary, resolvedSiteType);
         console.log(`[API] Filtered: ${applicableIssues.length}/${issueLibrary.length} issues applicable`);
 
         // Image-led detection pass (before retrieval) when screenshots are present
@@ -318,10 +324,6 @@ export async function POST(request: Request) {
           }
         }
 
-        // detect site type for additional context/logging and filtering
-        const siteType = inferSiteType(url, goal, crawlContext, screenshotText);
-        console.log(`[API] inferred site type: ${siteType}`);
-
         // use enhanced retrieval helper which also returns site type & terminology
         const retrievalResult = await retrieveRelevantIssues(
           url,
@@ -331,6 +333,7 @@ export async function POST(request: Request) {
           screenshotText,
           hasScreenshots,
           imageDetectedResults.length > 0 ? imageDetectedResults : undefined,
+          resolvedSiteType
         );
         retrieved = retrievalResult.issues;
         // pass metadata to be included in the response (frontend can show badge)
@@ -339,8 +342,8 @@ export async function POST(request: Request) {
           terminology: retrievalResult.terminology,
           applicableIssues: retrievalResult.applicableCount,
           totalIssues: retrievalResult.totalCount,
-          confidence: siteTypeDetection.confidence,
-          evidence: siteTypeDetection.evidence,
+          confidence: siteTypeDetectionResult.confidence,
+          evidence: siteTypeDetectionResult.evidence,
           issuesRetrieved: retrieved.length,
           accessBlocked: crawlResult.blockedOrLimited,
         };
@@ -452,10 +455,19 @@ export async function POST(request: Request) {
           index === self.findIndex((s) => s.issue.issue_id === item.issue.issue_id)
       );
       suppressedIssues = deduplicatedSuppressed;
+
+      // STRICT GATE: Ensure that any issue marked as absent or not applicable 
+      // (based on resolved site type) is filtered out before final report generation.
+      const strictlyApplicable = filterApplicableIssues(validatedIssues, resolvedSiteType);
+      const newlySuppressed = validatedIssues.filter(v => !strictlyApplicable.includes(v));
+      for (const v of newlySuppressed) {
+        suppressedIssues.push({ issue: v, reason: "Filtered out before report generation due to overarching site type mismatch" });
+      }
+      validatedIssues = strictlyApplicable;
     }
 
     const messages = useCompany
-      ? buildCompanyGroundedMessages(url, goal, validatedIssues, suppressedIssues)
+      ? buildCompanyGroundedMessages(url, goal, validatedIssues, suppressedIssues, { siteType: resolvedSiteType })
       : buildGenericMessages(url, goal);
 
     const prompt = `${formatMessagesForResponses(messages)}${crawlContext}`;
@@ -621,6 +633,7 @@ export async function POST(request: Request) {
         },
         body: JSON.stringify({
           model: "openrouter/auto",
+          max_tokens: 4000,
           messages: [
             {
               role: "user",

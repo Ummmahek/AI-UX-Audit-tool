@@ -1,4 +1,4 @@
-﻿import fs from "fs/promises";
+import fs from "fs/promises";
 import path from "path";
 import { detectSiteType } from "./siteTypeDetection";
 import { buildDynamicSystemPrompt, buildDynamicUserPrompt } from "./prompts";
@@ -391,6 +391,7 @@ export async function retrieveRelevantIssues(
   screenshotText = "",
   hasScreenshots = false,
   imageDetected?: ImageDetectedResult[],
+  resolvedSiteType: string = 'ecommerce',
 ): Promise<{
   issues: Issue[];
   siteType: string;
@@ -400,10 +401,8 @@ export async function retrieveRelevantIssues(
 }> {
   const library = await loadIssueLibrary();
   // use robust detection which may fallback to URL if content blocked
-  const detection = detectSiteType(crawlExcerpts ?? '', url);
-  const siteType = detection.type;
-  const applicableIssues = filterLibraryForSiteType(library, siteType);
-  const terminology = getTerminology(siteType);
+  const applicableIssues = filterLibraryForSiteType(library, resolvedSiteType);
+  const terminology = getTerminology(resolvedSiteType);
   const retrieved = simpleRetrieveIssues(
     library,
     url,
@@ -413,11 +412,12 @@ export async function retrieveRelevantIssues(
     screenshotText,
     hasScreenshots,
     imageDetected,
+    resolvedSiteType
   );
 
   return {
     issues: retrieved,
-    siteType,
+    siteType: resolvedSiteType,
     terminology,
     applicableCount: applicableIssues.length,
     totalCount: library.length,
@@ -433,9 +433,9 @@ export function simpleRetrieveIssues(
   screenshotText = "",
   hasScreenshots = false,
   imageDetected?: ImageDetectedResult[],
+  resolvedSiteType: string = 'ecommerce'
 ): RetrievedIssue[] {
-  const siteType = inferSiteType(url, goal, crawlExcerpts, screenshotText);
-  const filteredLibrary = filterLibraryForSiteType(issueLibrary, siteType);
+  const filteredLibrary = filterLibraryForSiteType(issueLibrary, resolvedSiteType);
 
   const detectionType = (issue: Issue): string =>
     typeof (issue as any).detection_type === "string" ? String((issue as any).detection_type) : "presence";
@@ -886,6 +886,7 @@ export function buildCompanyGroundedMessages(
     screenshotCount,
     url,
     goal,
+    crawlSuccess: true,
   });
 
   // â”€â”€ Dynamic user prompt â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -1116,6 +1117,7 @@ Return ONLY a JSON array of these objects, one per issue.No other text.`;
         },
         body: JSON.stringify({
           model: "openrouter/auto",
+          max_tokens: 4000,
           messages: [{
             role: "user",
             content: screenshotImages && screenshotImages.length > 0

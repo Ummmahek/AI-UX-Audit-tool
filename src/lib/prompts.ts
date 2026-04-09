@@ -104,6 +104,13 @@ ANALYSIS INSTRUCTIONS
 REPORT FORMAT
 ═══════════════════════════════════════════════════════════════
 
+Always start the output with the following structure:
+
+# [Site Name]
+**Site Type:** ${context.siteType}
+[Brief 1-2 sentence introduction about the site and the goal of this audit]
+
+## Findings
 For each confirmed issue:
 
 **[ISSUE_ID]: [Title from library]**

@@ -7,11 +7,11 @@ export function detectFromURL(url: string, title?: string): {
   const titleLower = (title || '').toLowerCase();
   const combined = urlLower + ' ' + titleLower;
 
-  if (combined.includes('residences') || combined.includes('properties') || combined.includes('realestate') || combined.includes('estate')) {
+  if (combined.includes('residences') || combined.includes('properties') || combined.includes('realestate') || combined.includes('estate') || combined.includes('marina')) {
     return {
       type: 'real_estate',
       confidence: 'medium',
-      evidence: ['URL contains real estate indicators'],
+      evidence: ['URL/Title contains real estate indicators'],
     };
   }
 
@@ -48,64 +48,115 @@ export function detectSiteType(
   confidence: 'high' | 'medium' | 'low';
   evidence: string[];
 } {
-  // If blocked or very little content, fall back to URL-based detection
-  if (bodyText.includes('Access Denied') || bodyText.length < 500) {
-    console.log('[SITE TYPE] Content blocked or minimal, using URL-based detection');
+  const urlLower = url.toLowerCase();
+  const extractedTitle = (title || bodyText.match(/Title:\s*(.+)/i)?.[1] || '').toLowerCase();
+  const extractedMeta = (bodyText.match(/Meta:\s*(.+)/i)?.[1] || '').toLowerCase();
+  const rawText = bodyText.toLowerCase();
+
+  const isBlocked = rawText.includes('access denied') || rawText.includes('security check') || rawText.includes('cloudflare') || rawText.includes('unusual traffic');
+  const isSparse = rawText.length < 500;
+
+  if ((isBlocked || isSparse) && !extractedTitle && !extractedMeta) {
+    console.log('[SITE TYPE] Content blocked/sparse and no metadata. Using URL fallback.');
     return detectFromURL(url, title);
   }
 
-  const text = bodyText.toLowerCase();
-
-  const indicators: Record<
-    string,
-    { keywords: string[]; weight: number }
-  > = {
+  type Config = { strong: string[]; weak: string[]; strongWeight: number; weakWeight: number };
+  
+  const indicators: Record<string, Config> = {
     ecommerce: {
-      keywords: ['add to cart', 'shopping cart', 'checkout', 'buy now', 'add to bag', 'shop', 'price:'],
-      weight: 1,
+      strong: ['add to cart', 'shopping cart', 'buy now', 'add to bag', 'checkout'],
+      weak: ['shop', 'price:', ' cart ', 'basket'],
+      strongWeight: 3,
+      weakWeight: 1,
     },
     'real_estate': {
-      keywords: [
-        'property', 'properties', 'bedroom', 'bedrooms', 'bathroom', 'sqft', 'sq ft',
-        'floor plan', 'schedule viewing', 'enquire', 'residences', 'apartments',
-        'villas', 'penthouses', 'marina', 'register your interest',
-      ],
-      weight: 1.2,
+      strong: ['property', 'properties', 'real estate', 'schedule viewing', 'floor plan', 'residences', 'marina', 'villas', 'penthouses', 'apartments', 'waterfront destination'],
+      weak: ['bedroom', 'bedrooms', 'bathroom', 'sqft', 'sq ft', 'enquire', 'register your interest'],
+      strongWeight: 3,
+      weakWeight: 1.2,
     },
     saas: {
-      keywords: ['dashboard', 'workspace', 'sign up', 'free trial', 'pricing', 'upgrade', 'api'],
-      weight: 1,
+      strong: ['sign up', 'free trial', 'pricing', 'api', 'dashboard'],
+      weak: ['workspace', 'upgrade'],
+      strongWeight: 3,
+      weakWeight: 1,
     },
     content: {
-      keywords: ['article', 'blog', 'published', 'author', 'read more', 'category', 'posted'],
-      weight: 1,
+      strong: ['article', 'blog', 'published', 'author'],
+      weak: ['read more', 'category', 'posted'],
+      strongWeight: 3,
+      weakWeight: 1,
     },
     corporate: {
-      keywords: ['about us', 'our services', 'contact us', 'request quote', 'our team', 'case studies'],
-      weight: 0.8,
+      strong: ['about us', 'our services', 'case studies', 'our team'],
+      weak: ['contact us', 'request quote', 'solutions'],
+      strongWeight: 3,
+      weakWeight: 0.8,
     },
   };
 
   const scores: Record<string, number> = {};
   const evidenceMap: Record<string, string[]> = {};
 
+  const searchAreas = [
+    { text: extractedTitle, multiplier: 2 },
+    { text: extractedMeta, multiplier: 2 },
+    { text: urlLower, multiplier: 2 },
+    { text: rawText, multiplier: 1 }
+  ];
+
   for (const [type, config] of Object.entries(indicators)) {
-    const matches = config.keywords.filter((kw) => text.includes(kw));
-    scores[type] = matches.length * config.weight;
-    evidenceMap[type] = matches.slice(0, 5);
+    let score = 0;
+    const matches = new Set<string>();
+
+    for (const { text, multiplier } of searchAreas) {
+      if (!text) continue;
+      
+      for (const kw of config.strong) {
+        if (text.includes(kw)) {
+          score += config.strongWeight * multiplier;
+          matches.add(kw);
+        }
+      }
+      for (const kw of config.weak) {
+        if (text.includes(kw)) {
+          score += config.weakWeight * multiplier;
+          matches.add(kw);
+        }
+      }
+    }
+    scores[type] = score;
+    evidenceMap[type] = Array.from(matches).slice(0, 5);
   }
 
   const sortedTypes = Object.entries(scores).sort((a, b) => b[1] - a[1]);
   const [detectedType, score] = sortedTypes[0] as [string, number];
 
+  if (score === 0) {
+    if (isBlocked || isSparse) {
+      console.log('[SITE TYPE] Low confidence/blocked content, trying URL...');
+      return detectFromURL(url, title);
+    } else {
+      console.log('[SITE TYPE] No clear signals, defaulting to corporate');
+      return { type: 'corporate', confidence: 'low', evidence: ['Fallback: insufficient data'] };
+    }
+  }
+
   let confidence: 'high' | 'medium' | 'low';
-  if (score >= 5) confidence = 'high';
-  else if (score >= 2) confidence = 'medium';
+  
+  if (score >= 6) confidence = 'high';
+  else if (score >= 3) confidence = 'medium';
   else confidence = 'low';
 
-  if (confidence === 'low') {
-    console.log('[SITE TYPE] Low confidence from content, trying URL...');
+  if (confidence === 'low' && (isBlocked || isSparse)) {
+    console.log('[SITE TYPE] Low confidence from content due to sparse/blocked text. Using URL.');
     return detectFromURL(url, title);
+  }
+
+  if (confidence === 'low' && detectedType === 'ecommerce') {
+    console.log('[SITE TYPE] Weak ecommerce signals. Falling back to corporate to be conservative.');
+    return { type: 'corporate', confidence: 'low', evidence: ['Fallback: weak ecommerce signals overridden'] };
   }
 
   console.log(`[SITE TYPE] Detected: ${detectedType} (confidence: ${confidence}, score: ${score})`);
@@ -117,3 +168,4 @@ export function detectSiteType(
     evidence: evidenceMap[detectedType],
   };
 }
+
