@@ -7,19 +7,26 @@ export type SignalMatchResult = {
   is_absence_issue: boolean;
   suppressed: boolean;
   suppression_reason?: string;
+  /** True when the issue was not suppressed but scored low due to weak/missing signals */
+  penalized?: boolean;
+  penaltyReason?: string;
+  /** The raw keyword score from retrieval step (passed through for recovery pass eligibility) */
+  keywordScore?: number;
 };
 
 /**
  * Deterministically checks whether an issue's signals_to_detect[] are present
- * in the crawl text + screenshot OCR text. Replaces validateIssuesWithLLM()
- * for all issues where screenshot-only visual judgment is not required.
+ * in the crawl text + screenshot OCR text.
+ *
+ * Change 1: Replaces hard suppression with a penalty-scoring model.
  *
  * Rules:
- * 1. Check negative_signals first — if any match, suppress immediately
- * 2. For each signal in signals_to_detect[], tokenise and check ≥50% term overlap
- * 3. Final score = matched_signals.length / total_signals (0 = no match, 1 = all matched)
- * 4. Absence issues (detection_type === "absence") are included when score === 0
- *    AND the page type is confirmed present in the evidence text
+ * 1. Explicit contradiction check — if negative signal term overlap ≥80% AND
+ *    positive signal overlap <20% → hard suppress (only true contradictions).
+ * 2. Negative signal partial match (≥50% terms) → strong score penalty (×0.4), NOT suppress.
+ * 3. No positive signals matched → low score (0.15), penalized=true, NOT suppress.
+ * 4. Weak positive match (1 signal) → mild penalty (×0.75).
+ * 5. Absence issues (detection_type === "absence") → keep existing positive logic.
  */
 
 const PAGE_TYPE_URL_PATTERNS: Record<string, RegExp> = {
@@ -30,47 +37,72 @@ const PAGE_TYPE_URL_PATTERNS: Record<string, RegExp> = {
   category: /\/(category|collection|shop|browse|c\/)\//i,
 };
 
+/** Compute term overlap ratio between a phrase and a haystack. */
+function termOverlap(phrase: string, haystack: string): number {
+  const terms = phrase.toLowerCase().match(/\b[a-z0-9]{3,}\b/g) ?? [];
+  if (terms.length === 0) return 0;
+  const hits = terms.filter((t) => haystack.includes(t)).length;
+  return hits / terms.length;
+}
+
 export function deterministicSignalCheck(
   issue: Issue,
   crawlText: string,
-  screenshotOcrText: string
+  screenshotOcrText: string,
+  keywordScore?: number,
 ): SignalMatchResult {
   const haystack = `${crawlText} ${screenshotOcrText}`.toLowerCase();
   const signals: string[] = issue.signals_to_detect ?? [];
   const negSignals: string[] = (issue as any).negative_signals ?? [];
   const isAbsence = (issue as any).detection_type === 'absence';
 
-  // Step 1: Check negative signals — any match → suppress
+  // ── Step 1: Negative signal analysis ──────────────────────────────────────
+  let negPenaltyFactor = 1.0;
+  let explicitContradiction = false;
+
   for (const neg of negSignals) {
-    const terms = neg.toLowerCase().match(/\b[a-z0-9]{3,}\b/g) ?? [];
-    if (terms.length === 0) continue;
-    const hitCount = terms.filter((t) => haystack.includes(t)).length;
-    if (hitCount / terms.length >= 0.5) {
+    const negOverlap = termOverlap(neg, haystack);
+    if (negOverlap < 0.5) continue; // below 50%: not a real match
+
+    // Compute positive overlap to detect explicit contradiction
+    // (negative signal clearly present AND positive evidence essentially absent)
+    const posSignalOverlaps = signals.map((s) => termOverlap(s, haystack));
+    const maxPosOverlap = posSignalOverlaps.length > 0
+      ? Math.max(...posSignalOverlaps)
+      : 0;
+
+    if (negOverlap >= 0.8 && maxPosOverlap < 0.2) {
+      // Hard contradiction: the thing that would disprove the issue is clearly
+      // present and there is essentially no positive evidence for the issue.
+      explicitContradiction = true;
       return {
         issue_id: issue.issue_id ?? '',
         matched_signals: [],
         score: 0,
         is_absence_issue: isAbsence,
         suppressed: true,
-        suppression_reason: `Negative signal matched: "${neg}"`,
+        suppression_reason: `Explicit contradiction: negative signal "${neg}" strongly present (${Math.round(negOverlap * 100)}% term overlap) with minimal positive evidence (${Math.round(maxPosOverlap * 100)}%)`,
+        keywordScore,
       };
+    }
+
+    // Partial negative match: apply a strong score penalty (×0.4) but do NOT suppress.
+    if (negOverlap >= 0.5) {
+      negPenaltyFactor = Math.min(negPenaltyFactor, 0.4);
     }
   }
 
-  // Step 2: Match positive signals
+  // ── Step 2: Match positive signals ────────────────────────────────────────
   const matched: string[] = [];
   for (const sig of signals) {
-    const terms = sig.toLowerCase().match(/\b[a-z0-9]{3,}\b/g) ?? [];
-    if (terms.length === 0) continue;
-    const hitCount = terms.filter((t) => haystack.includes(t)).length;
-    if (hitCount / terms.length >= 0.5) {
+    if (termOverlap(sig, haystack) >= 0.5) {
       matched.push(sig);
     }
   }
 
-  const score = signals.length > 0 ? matched.length / signals.length : 0;
+  const rawScore = signals.length > 0 ? matched.length / signals.length : 0;
 
-  // Step 3: Absence issues — include when the relevant page is present but the feature is absent
+  // ── Step 3: Absence issues ────────────────────────────────────────────────
   if (isAbsence) {
     const pageTypes: string[] = (issue as any).page_type ?? [];
     const pageTypeConfirmed = pageTypes.some((pt) => {
@@ -81,14 +113,15 @@ export function deterministicSignalCheck(
         PAGE_TYPE_URL_PATTERNS[ptLower]?.test((issue as any).page_url ?? '')
       );
     });
-    const featureAbsent = score === 0; // no positive signals found = feature is missing
+    const featureAbsent = rawScore === 0; // no positive signals found = feature is missing
     if (pageTypeConfirmed && featureAbsent) {
       return {
         issue_id: issue.issue_id ?? '',
         matched_signals: [],
-        score: 0.8, // absence confirmed — assign fixed confidence
+        score: 0.8 * negPenaltyFactor,
         is_absence_issue: true,
         suppressed: false,
+        keywordScore,
       };
     } else if (!pageTypeConfirmed) {
       return {
@@ -98,27 +131,54 @@ export function deterministicSignalCheck(
         is_absence_issue: true,
         suppressed: true,
         suppression_reason: 'Page type not confirmed in crawl or screenshot evidence',
+        keywordScore,
       };
     }
   }
 
-  // Step 4: Presence issues — suppress if no signals matched
-  if (score === 0 && !isAbsence) {
+  // ── Step 4: Presence issues — penalty model (no hard drop for zero score) ──
+  if (rawScore === 0 && !isAbsence) {
+    // No signals matched at all → very low score, penalized but NOT suppressed.
+    // These will naturally rank below any issue with real evidence.
     return {
       issue_id: issue.issue_id ?? '',
       matched_signals: [],
-      score: 0,
+      score: 0.15 * negPenaltyFactor, // floor penalty
       is_absence_issue: false,
-      suppressed: true,
-      suppression_reason: 'No positive signals matched in crawl or screenshot text',
+      suppressed: false,
+      penalized: true,
+      penaltyReason: 'No positive signals matched in crawl or screenshot text',
+      keywordScore,
     };
+  }
+
+  // Weak evidence: only 1 signal matched → mild penalty
+  let finalScore = rawScore;
+  let penalized = false;
+  let penaltyReason: string | undefined;
+
+  if (matched.length === 1 && signals.length > 1) {
+    finalScore = rawScore * 0.75;
+    penalized = true;
+    penaltyReason = `Only 1 of ${signals.length} signals matched (weak evidence)`;
+  }
+
+  // Apply negative penalty
+  finalScore = finalScore * negPenaltyFactor;
+
+  if (negPenaltyFactor < 1.0) {
+    penalized = true;
+    penaltyReason = `${penaltyReason ? penaltyReason + '; ' : ''}Negative signal partial match applied penalty ×${negPenaltyFactor}`;
   }
 
   return {
     issue_id: issue.issue_id ?? '',
     matched_signals: matched,
-    score,
+    score: finalScore,
     is_absence_issue: isAbsence,
     suppressed: false,
+    penalized,
+    penaltyReason,
+    keywordScore,
   };
 }

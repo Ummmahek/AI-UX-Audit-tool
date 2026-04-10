@@ -400,71 +400,321 @@ export async function POST(request: Request) {
       });
     }
 
-    // Deterministic signal matching — replaces validateIssuesWithLLM()
-    let validatedIssues = retrieved;
+    // ══════════════════════════════════════════════════════════════════════
+    // SHARED FINAL RANKING POOL
+    // Changes: 1 (penalty model), 2 (shared pool), 3 (cluster caps),
+    //          4 (screenshot-driven recovery), plus DET page weight +
+    //          global DET ratio cap.
+    // ══════════════════════════════════════════════════════════════════════
+    let validatedIssues: typeof retrieved = retrieved;
+
     if (useCompany && retrieved.length > 0) {
-      const crawlTextCombined = crawlResult.pages.map((p) => p.excerpt ?? '').join(' ');
 
-      const validated: typeof retrieved = [];
-      const suppressed: Array<{ issue: typeof retrieved[0]; reason: string }> = [];
+    const DET_CLUSTER_SCORES: Record<string, number> = {
+      'DET-001': 0.90, 'DET-002': 0.90, 'DET-003': 0.90, // Accessibility
+      'DET-014': 0.88, 'DET-017': 0.88,                   // Forms / CTAs
+      'DET-009': 0.85, 'DET-010': 0.85, 'DET-011': 0.85, // Checkout trust/flow
+      'DET-015': 0.85, 'DET-016': 0.85,
+      'DET-012': 0.82, 'DET-013': 0.82,                   // Navigation
+      'DET-004': 0.70, 'DET-005': 0.70, 'DET-006': 0.70, // Heading structure
+      'DET-007': 0.55, 'DET-008': 0.55,                   // SEO / meta
+    };
 
-      const allCandidateIssues = retrieved;
-      console.log('[DEBUG] imageConfirmed flags:', 
-        allCandidateIssues.map(i => ({ id: i.issue_id, confirmed: (i as any).imageConfirmed }))
-      );
+    // Cluster membership for cap enforcement
+    const DET_CLUSTER_MAP: Record<string, string> = {
+      'DET-001': 'accessibility', 'DET-002': 'accessibility', 'DET-003': 'accessibility',
+      'DET-014': 'forms_ctas',   'DET-017': 'forms_ctas',
+      'DET-009': 'checkout',     'DET-010': 'checkout', 'DET-011': 'checkout',
+      'DET-015': 'checkout',     'DET-016': 'checkout',
+      'DET-012': 'navigation',   'DET-013': 'navigation',
+      'DET-004': 'heading',      'DET-005': 'heading',  'DET-006': 'heading',
+      'DET-007': 'seo_meta',     'DET-008': 'seo_meta',
+    };
 
-      for (const issue of allCandidateIssues) {
-        // Deterministic issues (from detect.ts) are NEVER suppressed
-        if ((issue as any).source === 'deterministic') {
-          validated.push(issue);
-          continue;
-        }
-        // Image-confirmed issues are protected from suppression (preserve existing behaviour)
-        if ((issue as any).imageConfirmed === true) {
-          validated.push(issue);
-          continue;
-        }
-        // All other issues go through deterministic signal matching
-        const result = deterministicSignalCheck(issue, crawlTextCombined, screenshotText);
-        if (!result.suppressed) {
-          validated.push({ ...issue, confidence: result.score });
-        } else {
-          suppressed.push({ issue, reason: result.suppression_reason ?? 'No signals matched' });
-        }
-      }
+    const DET_CLUSTER_CAPS: Record<string, number> = {
+      accessibility: 2,
+      forms_ctas:    2,
+      checkout:      2,
+      navigation:    1,
+      heading:       1,
+      seo_meta:      1,
+    };
 
-      // Merge deterministic issues — add any that aren't already in the validated list
-      for (const det of deterministicIssues) {
-        const alreadyPresent = validated.some((v) => v.issue_id === det.issue_id);
-        if (!alreadyPresent) {
-          validated.push({
-            issue_id: det.issue_id,
-            issue_title: det.issue_title,
-            source: 'deterministic',
-            confidence: det.confidence,
-            evidence: det.evidence,
-            // Fill other required Issue fields with safe defaults if needed
-          } as any);
-        }
-      }
-
-      validatedIssues = validated;
-      // deduplicate suppressed list by issue_id to avoid noise
-      const deduplicatedSuppressed = suppressed.filter(
-        (item, index, self) =>
-          index === self.findIndex((s) => s.issue.issue_id === item.issue.issue_id)
-      );
-      suppressedIssues = deduplicatedSuppressed;
-
-      // STRICT GATE: Ensure that any issue marked as absent or not applicable 
-      // (based on resolved site type) is filtered out before final report generation.
-      const strictlyApplicable = filterApplicableIssues(validatedIssues, resolvedSiteType);
-      const newlySuppressed = validatedIssues.filter(v => !strictlyApplicable.includes(v));
-      for (const v of newlySuppressed) {
-        suppressedIssues.push({ issue: v, reason: "Filtered out before report generation due to overarching site type mismatch" });
-      }
-      validatedIssues = strictlyApplicable;
+    // ── Page relevance weight for DET issues ──────────────────────────────
+    function detPageWeight(pageLabel: string, primaryUrl: string): number {
+      if (!pageLabel || pageLabel === 'unknown') return 0.75;
+      const pl = pageLabel.toLowerCase();
+      const pu = primaryUrl.toLowerCase();
+      // Current/primary: homepage crawl matching audit URL, or any labelled homepage
+      if (pl === 'homepage' || pu.includes(pl)) return 1.0;
+      // Related pages (same journey stage is loosely assessed by label)
+      const related = ['product', 'category', 'cart', 'checkout', 'account', 'search'];
+      if (related.includes(pl)) return 0.75;
+      return 0.5;
     }
+
+    const crawlTextCombined = crawlResult.pages.map((p) => p.excerpt ?? '').join(' ');
+
+    // ── Step A: Score UX issues via penalty model (Change 1) ──────────────
+    type PoolEntry = {
+      issue: typeof retrieved[0];
+      finalScore: number;
+      source: 'ux' | 'det';
+      penalized?: boolean;
+    };
+
+    // Track hard-suppressed IDs (explicit contradictions) — never recover these
+    const hardSuppressedIds = new Set<string>();
+    const penalizedPool: Array<{ issue: typeof retrieved[0]; score: number; keywordScore: number }> = [];
+
+    const uxPool: PoolEntry[] = [];
+
+    for (const issue of retrieved) {
+      // Deterministic issues (from detect.ts) handled separately in DET pool
+      if ((issue as any).source === 'deterministic') continue;
+
+      // Image-confirmed issues get a strong fixed score
+      if ((issue as any).imageConfirmed === true) {
+        uxPool.push({ issue, finalScore: 0.80, source: 'ux' });
+        continue;
+      }
+
+      // Retrieve the stored keyword score if the issue carries it
+      const storedKw: number = typeof (issue as any).keywordScore === 'number'
+        ? (issue as any).keywordScore
+        : 0;
+
+      const result = deterministicSignalCheck(
+        issue,
+        crawlTextCombined,
+        screenshotText,
+        storedKw,
+      );
+
+      if (result.suppressed) {
+        // Hard suppression (explicit contradiction) — record but exclude from pool
+        hardSuppressedIds.add(issue.issue_id ?? '');
+        suppressedIssues.push({ issue, reason: result.suppression_reason ?? 'Explicit contradiction' });
+        continue;
+      }
+
+      if (result.penalized) {
+        // Penalized but not suppressed — eligible for screenshot recovery (Change 4)
+        penalizedPool.push({
+          issue,
+          score: result.score,
+          keywordScore: result.keywordScore ?? storedKw,
+        });
+        continue;
+      }
+
+      // Normal inclusion with scored confidence
+      uxPool.push({
+        issue: { ...issue, confidence: result.score },
+        finalScore: result.score,
+        source: 'ux',
+      });
+    }
+
+    // ── Step B: Screenshot-driven recovery pass (Change 4) ────────────────
+    const MAX_RECOVERED_UX = 5;
+    const screenshotLower = screenshotText.toLowerCase();
+    const imageConfirmedRecoveryIds = new Set(
+      imageDetectedResults.map((r) => r.issue_id)
+    );
+
+    const recoveredCandidates: Array<{ issue: typeof retrieved[0]; recoveredScore: number }> = [];
+
+    for (const { issue, score: penalizedScore, keywordScore } of penalizedPool) {
+      const id = issue.issue_id ?? '';
+      // Never recover hard-suppressed
+      if (hardSuppressedIds.has(id)) continue;
+
+      // Recovery path 1: confirmed by image detection pass → score 0.70
+      if (imageConfirmedRecoveryIds.has(id)) {
+        recoveredCandidates.push({ issue, recoveredScore: 0.70 });
+        continue;
+      }
+
+      // Recovery path 2: signal match in screenshot + no contradiction + keyword overlap
+      // Tweak 2: raise keyword threshold to >= 0.2 (prevents random token matches)
+      if (keywordScore >= 0.2) {
+        const signals: string[] = issue.signals_to_detect ?? [];
+        const hasScreenshotSignal = signals.some((sig) => {
+          const terms = sig.toLowerCase().match(/\b[a-z0-9]{3,}\b/g) ?? [];
+          return terms.some((t) => screenshotLower.includes(t));
+        });
+
+        if (hasScreenshotSignal) {
+          recoveredCandidates.push({ issue, recoveredScore: 0.58 });
+        }
+      }
+      // If no screenshot support: do not recover (stays suppressed from final pool)
+    }
+
+    // Sort recovered by score, take top MAX_RECOVERED_UX
+    // Tweak 1: cluster diversity — max 2 recovered issues per issueCluster
+    recoveredCandidates.sort((a, b) => b.recoveredScore - a.recoveredScore);
+    const recoveredClusterCounts: Record<string, number> = {};
+    const topRecovered: typeof recoveredCandidates = [];
+    for (const candidate of recoveredCandidates) {
+      if (topRecovered.length >= MAX_RECOVERED_UX) break;
+      const cluster: string = (candidate.issue as any).issueCluster
+        ?? (candidate.issue as any).issue_cluster
+        ?? 'uncategorised';
+      const count = recoveredClusterCounts[cluster] ?? 0;
+      if (count >= 2) {
+        console.log(`[Recovery] Skipping ${candidate.issue.issue_id} — cluster "${cluster}" at diversity cap`);
+        continue;
+      }
+      recoveredClusterCounts[cluster] = count + 1;
+      topRecovered.push(candidate);
+    }
+
+    for (const { issue, recoveredScore } of topRecovered) {
+      console.log(`[Recovery] Re-injecting ${issue.issue_id} at score ${recoveredScore.toFixed(2)}`);
+      uxPool.push({
+        issue: { ...issue, confidence: recoveredScore },
+        finalScore: recoveredScore,
+        source: 'ux',
+      });
+    }
+
+    // ── Step C: Build scored DET pool (Change 2 + page weight) ───────────
+    const detPool: PoolEntry[] = [];
+
+    for (const det of deterministicIssues) {
+      const alreadyInUxPool = uxPool.some((e) => e.issue.issue_id === det.issue_id);
+      if (alreadyInUxPool) continue;
+
+      const baseScore = DET_CLUSTER_SCORES[det.issue_id] ?? 0.65;
+      const weight = detPageWeight(det.page_label ?? '', url ?? '');
+      // Tweak 3: cap DET finalScore at 0.88 to keep UX competitive in ties
+      const finalScore = Math.min(baseScore * weight, 0.88);
+
+      detPool.push({
+        issue: {
+          issue_id: det.issue_id,
+          issue_title: det.issue_title,
+          source: 'deterministic',
+          confidence: det.confidence,
+          evidence: det.evidence,
+        } as any,
+        finalScore,
+        source: 'det',
+      });
+    }
+
+    // ── Step D: Apply per-cluster DET caps (Change 3) ─────────────────────
+    // Sort DET pool by score descending first, then cap within cluster.
+    detPool.sort((a, b) => b.finalScore - a.finalScore);
+
+    const clusterCounts: Record<string, number> = {};
+    const detPoolCapped: PoolEntry[] = [];
+    const detPoolOverflow: PoolEntry[] = [];
+
+    for (const entry of detPool) {
+      const id = entry.issue.issue_id ?? '';
+      const cluster = DET_CLUSTER_MAP[id] ?? 'other';
+      const cap = DET_CLUSTER_CAPS[cluster] ?? 99;
+      const count = clusterCounts[cluster] ?? 0;
+
+      if (count < cap) {
+        detPoolCapped.push(entry);
+        clusterCounts[cluster] = count + 1;
+      } else {
+        console.log(`[DET cap] Cluster "${cluster}" at cap (${cap}), pushing ${id} to overflow`);
+        detPoolOverflow.push(entry);
+      }
+    }
+
+    // ── Step E: Merge UX + capped DET into final ranked pool ──────────────
+    const mergedPool = [
+      ...uxPool,
+      ...detPoolCapped,
+    ].sort((a, b) => b.finalScore - a.finalScore);
+
+    // Tweak 4: log top-10 ranked scores for debugging why issues win/lose
+    const TOP_LOG_N = 10;
+    console.log(
+      '[Ranking] Top scores:\n' +
+      mergedPool.slice(0, TOP_LOG_N).map(
+        (e) => `  ${e.source.toUpperCase()} ${e.issue.issue_id ?? '?'} → ${e.finalScore.toFixed(2)}`
+      ).join('\n')
+    );
+
+    // ── Step F: Global DET ratio cap — max 40% DET in final slice ─────────
+    const TARGET_SLICE = Math.min(topK, mergedPool.length + detPoolOverflow.length);
+    const MAX_DET_COUNT = Math.floor(TARGET_SLICE * 0.40);
+
+    const finalPool: PoolEntry[] = [];
+    let detCount = 0;
+    const deferredDet: PoolEntry[] = [];
+
+    for (const entry of mergedPool) {
+      if (entry.source === 'det') {
+        if (detCount < MAX_DET_COUNT) {
+          finalPool.push(entry);
+          detCount++;
+        } else {
+          console.log(`[DET ratio cap] DET at ${MAX_DET_COUNT} limit, deferring ${entry.issue.issue_id}`);
+          deferredDet.push(entry);
+        }
+      } else {
+        finalPool.push(entry);
+      }
+    }
+
+    // Fill remaining slots: first with UX overflow (none in current design),
+    // then overflow DET if there's still capacity.
+    if (finalPool.length < TARGET_SLICE) {
+      const remaining = TARGET_SLICE - finalPool.length;
+      finalPool.push(...deferredDet.slice(0, remaining));
+      finalPool.push(...detPoolOverflow.slice(0, Math.max(0, remaining - deferredDet.length)));
+    }
+
+    // Slice to topK
+    validatedIssues = finalPool
+      .slice(0, topK)
+      .map((e) => e.issue);
+
+    // Record what was suppressed (non-recovered penalized items)
+    const finalIds = new Set(validatedIssues.map((i) => i.issue_id).filter(Boolean));
+    for (const { issue } of penalizedPool) {
+      if (!finalIds.has(issue.issue_id ?? '')) {
+        suppressedIssues.push({
+          issue,
+          reason: 'Penalized (no screenshot support) — ranked out of final pool',
+        });
+      }
+    }
+
+    // Deduplicate suppressed list by issue_id
+    const deduplicatedSuppressed = suppressedIssues.filter(
+      (item, index, self) =>
+        index === self.findIndex((s) => s.issue.issue_id === item.issue.issue_id)
+    );
+    suppressedIssues = deduplicatedSuppressed;
+
+    // STRICT GATE: Remove issues inapplicable to resolved site type
+    const strictlyApplicable = filterApplicableIssues(validatedIssues, resolvedSiteType);
+    const newlySuppressed = validatedIssues.filter((v) => !strictlyApplicable.includes(v));
+    for (const v of newlySuppressed) {
+      suppressedIssues.push({
+        issue: v,
+        reason: 'Filtered out before report generation due to overarching site type mismatch',
+      });
+    }
+    validatedIssues = strictlyApplicable;
+
+    console.log(
+      `[Pool] Final: ${validatedIssues.length} issues (UX: ${
+        validatedIssues.filter((i) => !(i as any).source || (i as any).source !== 'deterministic').length
+      }, DET: ${
+        validatedIssues.filter((i) => (i as any).source === 'deterministic').length
+      }), Suppressed: ${suppressedIssues.length}, Recovered UX: ${topRecovered.length}`
+    );
+    }  // end if (useCompany && retrieved.length > 0)
 
     const messages = useCompany
       ? buildCompanyGroundedMessages(url, goal, validatedIssues, suppressedIssues, { siteType: resolvedSiteType })
