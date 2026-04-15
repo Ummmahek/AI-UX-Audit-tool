@@ -16,6 +16,8 @@ type RetrievedIssue = {
 type ApiResponse = {
   report: string;
   retrievedIssues?: RetrievedIssue[];
+  finalIssues?: RetrievedIssue[];
+  total_estimated_fix_hours?: number;
   usedMock?: boolean;
   note?: string;
   model?: string;
@@ -575,6 +577,7 @@ export default function Home() {
   const [reportId, setReportId] = useState<string>("");
   const [siteType, setSiteType] = useState<string>("");
   const [retrievedIssues, setRetrievedIssues] = useState<RetrievedIssue[]>([]);
+  const [totalEstimatedFixHours, setTotalEstimatedFixHours] = useState<number | null>(null);
   const [usedMock, setUsedMock] = useState<boolean>(false);
   const [usedModel, setUsedModel] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -750,6 +753,7 @@ export default function Home() {
     setError(null);
     setMessage(null);
     setReport("");
+    setTotalEstimatedFixHours(null);
     setUsedModel(null);
     setHasSubmitted(true);
     setSelectedSeverities(new Set());
@@ -799,6 +803,11 @@ export default function Home() {
 
       setReport(data.report);
       setRetrievedIssues(data.retrievedIssues ?? []);
+      setTotalEstimatedFixHours(
+        typeof data.total_estimated_fix_hours === "number"
+          ? data.total_estimated_fix_hours
+          : null,
+      );
       setUsedMock(Boolean(data.usedMock));
       setUsedModel(data.model ?? null);
       setSiteType((data as any).metadata?.siteType ?? "");
@@ -1084,6 +1093,19 @@ export default function Home() {
                     <>
                       <SeverityDashboard issues={retrievedIssues} />
                       <SeverityLevelDashboard issues={retrievedIssues} />
+                      {typeof totalEstimatedFixHours === "number" ? (
+                        <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-600 mb-2">
+                            ESTIMATED TOTAL FIX TIME
+                          </p>
+                          <p className="text-3xl font-semibold text-slate-900">
+                            {totalEstimatedFixHours} hours
+                          </p>
+                          <p className="mt-2 text-xs text-slate-500">
+                            Based on summed estimated hours of final reported issues
+                          </p>
+                        </div>
+                      ) : null}
                     </>
                   ) : null}
                   <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-relaxed text-slate-800">

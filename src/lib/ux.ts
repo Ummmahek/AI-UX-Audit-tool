@@ -1,4 +1,4 @@
-import fs from "fs/promises";
+﻿import fs from "fs/promises";
 import path from "path";
 import { detectSiteType } from "./siteTypeDetection";
 import { buildDynamicSystemPrompt, buildDynamicUserPrompt } from "./prompts";
@@ -391,7 +391,7 @@ export async function retrieveRelevantIssues(
   screenshotText = "",
   hasScreenshots = false,
   imageDetected?: ImageDetectedResult[],
-  resolvedSiteType: string = 'ecommerce',
+  siteTypeOverride?: string,
 ): Promise<{
   issues: Issue[];
   siteType: string;
@@ -400,9 +400,13 @@ export async function retrieveRelevantIssues(
   totalCount: number;
 }> {
   const library = await loadIssueLibrary();
-  // use robust detection which may fallback to URL if content blocked
-  const applicableIssues = filterLibraryForSiteType(library, resolvedSiteType);
-  const terminology = getTerminology(resolvedSiteType);
+  // use robust detection only when the caller has not already provided a site type
+  const detection = siteTypeOverride
+    ? { type: siteTypeOverride, confidence: 'medium' as const, evidence: [] as string[] }
+    : detectSiteType(crawlExcerpts ?? '', url);
+  const siteType = detection.type;
+  const applicableIssues = filterLibraryForSiteType(library, siteType);
+  const terminology = getTerminology(siteType);
   const retrieved = simpleRetrieveIssues(
     library,
     url,
@@ -412,12 +416,12 @@ export async function retrieveRelevantIssues(
     screenshotText,
     hasScreenshots,
     imageDetected,
-    resolvedSiteType
+    siteType,
   );
 
   return {
     issues: retrieved,
-    siteType: resolvedSiteType,
+    siteType,
     terminology,
     applicableCount: applicableIssues.length,
     totalCount: library.length,
@@ -433,9 +437,10 @@ export function simpleRetrieveIssues(
   screenshotText = "",
   hasScreenshots = false,
   imageDetected?: ImageDetectedResult[],
-  resolvedSiteType: string = 'ecommerce'
+  siteTypeOverride?: string,
 ): RetrievedIssue[] {
-  const filteredLibrary = filterLibraryForSiteType(issueLibrary, resolvedSiteType);
+  const siteType = siteTypeOverride ?? inferSiteType(url, goal, crawlExcerpts, screenshotText);
+  const filteredLibrary = filterLibraryForSiteType(issueLibrary, siteType);
 
   const detectionType = (issue: Issue): string =>
     typeof (issue as any).detection_type === "string" ? String((issue as any).detection_type) : "presence";
@@ -452,9 +457,10 @@ export function simpleRetrieveIssues(
     .sort((a, b) => b.keywordScore - a.keywordScore);
 
   // Fallback (presence track): if keyword matching is weak, include high-confidence library items
+  const candidateCap = Math.max(topK * 4, 24);
   let candidates = keywordScored
     .filter((entry) => entry.keywordScore > 0)
-    .slice(0, topK * 2);
+    .slice(0, candidateCap);
 
   // If we got very few candidates from keyword matching, add high-confidence fallback issues
   if (candidates.length < topK / 2) {
@@ -868,6 +874,9 @@ export function buildCompanyGroundedMessages(
     siteType?: string;
     applicableCount?: number;
     screenshotCount?: number;
+    crawlSuccess?: boolean;
+    playwrightUsed?: boolean;
+    dataQuality?: string;
   },
 ): PromptMessage[] {
   // â”€â”€ Detect site type if not supplied â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -881,12 +890,14 @@ export function buildCompanyGroundedMessages(
   // â”€â”€ Dynamic system prompt (no hardcoded issue IDs or thresholds) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const systemPrompt = buildDynamicSystemPrompt({
     siteType,
-    retrievedIssues,
+    finalIssues: retrievedIssues,
     applicableCount,
     screenshotCount,
     url,
     goal,
-    crawlSuccess: true,
+    crawlSuccess: options?.crawlSuccess ?? false,
+    playwrightUsed: options?.playwrightUsed ?? false,
+    dataQuality: options?.dataQuality ?? 'unknown',
   });
 
   // â”€â”€ Dynamic user prompt â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -1117,7 +1128,6 @@ Return ONLY a JSON array of these objects, one per issue.No other text.`;
         },
         body: JSON.stringify({
           model: "openrouter/auto",
-          max_tokens: 4000,
           messages: [{
             role: "user",
             content: screenshotImages && screenshotImages.length > 0

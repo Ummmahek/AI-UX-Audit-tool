@@ -2,81 +2,53 @@ import { type Issue } from "./ux";
 
 export function buildDynamicSystemPrompt(context: {
   siteType: string;
-  retrievedIssues: Issue[];
+  finalIssues: any[];
   applicableCount: number;
   screenshotCount: number;
   url: string;
   goal: string;
   crawlSuccess: boolean;
+  playwrightUsed: boolean;
+  dataQuality: string;
 }) {
   
-  // Calculate minimums
-  let minIssues: number;
-  if (context.crawlSuccess) {
-    minIssues = Math.max(20, Math.floor(context.retrievedIssues.length * 0.5));
-  } else if (context.screenshotCount > 0) {
-    minIssues = Math.max(15, context.screenshotCount * 4);
-  } else {
-    minIssues = 5;
-  }
-  
-  const maxIssues = Math.floor(minIssues * 1.6);
-
-  return `You are analyzing ${context.url} (a ${context.siteType} website) for UX issues.
+  return `You are writing a UX audit report for ${context.url} (a ${context.siteType} website).
 
 CONTEXT:
 - Site Type: ${context.siteType}
 - Screenshots: ${context.screenshotCount} provided
-- Crawl Data: ${context.crawlSuccess ? 'Available' : 'Limited - rely on screenshots'}
-- Issues to Check: ${context.retrievedIssues.length}
+- Crawl Data: ${context.crawlSuccess ? 'Available' : 'Limited'}
+- Playwright Used: ${context.playwrightUsed ? 'Yes' : 'No'}
+- Data Quality: ${context.dataQuality}
+- Issues to Check: ${context.finalIssues.length}
 - Your Goal: ${context.goal}
 
 ═══════════════════════════════════════════════════════════════
-ISSUE LIBRARY (${context.retrievedIssues.length} ISSUES TO CHECK)
+FINAL ISSUE LIST (${context.finalIssues.length} ISSUES)
 ═══════════════════════════════════════════════════════════════
 
-${context.retrievedIssues.map((issue, idx) => `
-${idx + 1}. ${issue.issue_id}: ${(issue as any).issue_title || (issue as any).title || 'Untitled'}
-   Severity: ${issue.severity}
-   Page Type: ${Array.isArray(issue.page_type) ? issue.page_type.join(', ') : issue.page_type}
-   Detection: ${(issue as any).detection_type || 'presence'}
-   
-   Signals to Detect:
-${(Array.isArray(issue.signals_to_detect) ? issue.signals_to_detect : []).map((s: string) => `   - ${s}`).join('\n') || '   - Use general UX principles'}
-   
-   Negative Signals (if ANY present, SKIP this issue):
-${(Array.isArray((issue as any).negative_signals) ? (issue as any).negative_signals : []).map((s: string) => `   - ${s}`).join('\n') || '   - None'}
-   
-   User Problem: ${(issue as any).user_problem || "UX consideration"}
-   Fix: ${issue.recommendation}
+${context.finalIssues.map((issue, idx) => `
+${idx + 1}. ${issue.issue_id}: ${issue.title}
+   Confidence: ${issue.confidence}
+   UX Impact: ${issue.ux_impact}
+   Cluster: ${issue.cluster}
+   Journey Stage: ${issue.journey_stage}
+   Evidence Summary: ${issue.evidence_summary}
+   Recommendation: ${issue.recommendation}
 `).join('\n')}
 
 ═══════════════════════════════════════════════════════════════
-ANALYSIS INSTRUCTIONS
+REPORT FORMAT & INSTRUCTIONS
 ═══════════════════════════════════════════════════════════════
 
-1. SYSTEMATIC CHECKING
-   Check EVERY issue above systematically:
-   - Read the signals to detect
-   - Look for those signals in screenshots and crawl data
-   - Check for negative signals - if ANY present, skip that issue
-   - If signals found and no negative signals → report it
-
-2. SCREENSHOT ANALYSIS ${context.screenshotCount > 0 ? `(${context.screenshotCount} provided)` : ''}
-   ${context.screenshotCount > 0 ? `
-   Examine each screenshot thoroughly:
-   - Check what's visible: navigation, content, forms, buttons, layout
-   - Look for both presence issues (unwanted elements) AND absence issues (missing elements)
-   - Find 4-5 issues per screenshot minimum
-   - Target: ${Math.floor(context.screenshotCount * 4)} total issues from screenshots
+1. FINAL VALIDATED ISSUES
+   Write the report strictly from this final validated list. Do not revalidate these issues. Do NOT add new issues, and do NOT remove or suppress any visually mapped issues that have already survived the pipeline. Use the exact issue IDs provided.
    
-   Common checks per screenshot:
-   - Navigation: breadcrumbs, search, menu complexity, language selector
-   - Content: contrast, text density, hierarchy, clarity
-   - Forms: labels, grouping, required fields, validation messages
-   - Layout: spacing, alignment, consistency
-   - Information: pricing, contact info, policies, trust signals
-   ` : 'No screenshots provided - use crawl data only'}
+2. EVIDENCE REQUIREMENTS
+   Every finding MUST have specific evidence, using the "Evidence Summary" provided.
+   - Example: "Screenshot 2 shows header navigation: no search icon visible"
+   - Example: "Crawl data shows 14 images with missing alt text"
+   - NO vague claims like "site has issues"
 
 3. SITE TYPE AWARENESS
    This is a ${context.siteType} site:
@@ -84,21 +56,6 @@ ANALYSIS INSTRUCTIONS
    ${context.siteType === 'real_estate' ? '- Focus on property listings, forms, contact info, NOT checkout/cart' : ''}
    ${context.siteType === 'saas' ? '- Focus on signup, dashboard, pricing pages' : ''}
    ${context.siteType === 'corporate' ? '- Focus on navigation, content clarity, contact forms' : ''}
-   
-   DO NOT report checkout/cart issues unless this is an ecommerce site.
-
-4. EVIDENCE REQUIREMENTS
-   Every finding MUST have specific evidence:
-   ${context.screenshotCount > 0 ? '- Reference screenshot number and element location' : ''}
-   - Example: "Screenshot 2 shows header navigation: no search icon visible"
-   - Example: "Crawl data shows 14 images with missing alt text"
-   - NO vague claims like "site has issues"
-
-5. MINIMUM REQUIREMENTS
-   Find at least ${minIssues} HIGH or MEDIUM confidence issues
-   Maximum ${maxIssues} issues
-   
-   If you're below minimum, re-examine screenshots more carefully.
 
 ═══════════════════════════════════════════════════════════════
 REPORT FORMAT
@@ -106,40 +63,65 @@ REPORT FORMAT
 
 Always start the output with the following structure:
 
-# [Site Name]
-**Site Type:** ${context.siteType}
-[Brief 1-2 sentence introduction about the site and the goal of this audit]
+# [Site Name] — UX Audit Report
 
-## Findings
-For each confirmed issue:
+**Site:** ${context.url}  
+**Type:** ${context.siteType}  
+**Goal:** ${context.goal}  
+**Data Quality:** ${context.dataQuality}  
+**Issues Found:** [Total Count]
 
-**[ISSUE_ID]: [Title from library]**
+---
 
-Detection: present | absent | not applicable
-Confidence: High | Medium | Low
-Evidence: [Screenshot X shows specific element/location: observation] OR [Crawl data shows: finding]
+## Executive Summary
+[2–3 sentence overview of most critical UX gaps]
 
-Signals to Detect:
-[List each signal with Present/Not observable/Negative signal found]
+---
 
-User Problem: [From library]
-Recommendation: [From library]
+## Journey Stage Findings
+
+### Stage: [Discovery / Evaluation / Action / Retention]
+
+For each confirmed issue in this stage:
+
+#### [ISSUE_ID] — [Title from library]
+**Confidence:** Confirmed | Likely | Possible  
+**UX Impact:** High | Medium | Low  
+**Evidence:** [Screenshot X / Crawl: specific observation]  
+**User Problem:** [From library]  
+**Recommendation:** [From library]  
+
+---
+
+## Issues by Cluster
+
+Create a compact summary grouping your final selected issues by their cluster.
+- Only show clusters that contain at least 1 selected issue. Do not print empty cluster headers.
+- Format the output strictly as a concise index, for example:
+  * Conversion: UX-003, UX-006, UX-007, DET-010
+  * Accessibility: UX-011, DET-003
+- Do not repeat issue titles, descriptions, evidence, or recommendations. This section should only summarize and index. No empty filler text.
+- If cluster coverage is sparse or concentrated, add a single one-line note at the end. Example: "Most issues concentrated in Conversion and Accessibility for this audit."
+
+---
+
+## Coverage & Limitations
+[Explain what flows (e.g. checkout, auth) could not be observed via automated crawl/screenshots]
 
 ═══════════════════════════════════════════════════════════════
 PRE-SUBMISSION CHECKLIST
 ═══════════════════════════════════════════════════════════════
 
-□ Checked all ${context.retrievedIssues.length} issues systematically
-□ Examined all ${context.screenshotCount} screenshots thoroughly
-□ Found at least ${minIssues} HIGH/MEDIUM confidence issues (current count: ___)
+□ Checked all ${context.finalIssues.length} issues systematically
 □ Every finding has specific evidence (screenshot X or crawl data)
+□ Assessed confidence as Confirmed, Likely, or Possible
+□ Applied strict anti-padding rule (no fluff issues)
 □ No checkout/cart issues reported (unless site is ecommerce)
 □ No duplicate issues
-□ Findings are diverse (not all navigation or all forms)
 
 ═══════════════════════════════════════════════════════════════
 
-Analyze the site now and report ${minIssues}-${maxIssues} confirmed issues.`;
+Analyze the site now and output the structured report.`;
 }
 
 export function buildDynamicUserPrompt(
@@ -147,18 +129,17 @@ export function buildDynamicUserPrompt(
     goal: string,
     hasScreenshots: boolean
 ): string {
-    return `Audit the following website using the UX Issue Library and detection framework provided in the system prompt.
+    return `Create the final UX audit report using the provided validated issue list.
 
 URL: ${url}
 Primary Goal: ${goal}
 
 Instructions:
-• Create an experience-led audit. Include ONLY issues you actually see in evidence (screenshots first, then crawl).
-• Every finding in the journey sections MUST reference a library UX-### ID.
-• ${hasScreenshots ? "Screenshots are attached — treat them as primary evidence. Base findings on what you can observe directly." : "No screenshots provided — base findings on crawl excerpts only. Label uncertain findings as \"Needs verification\"."}
-• Prioritise screenshot evidence over crawl: for cart, checkout, PDP, and any page shown in screenshots, use what the screenshots show; crawl is secondary.
-• Separate confirmed (visible in evidence) vs \"Needs verification\" when evidence is partial.
-• Aim to cover the key conversion paths: home → category → product → cart → checkout (when present).
-• For action-dependent flows (add-to-cart, authentication, form submission, checkout), if the crawl cannot perform the action, use: "Not observable via crawl — Requires manual verification".
-• End with: "Where a manual UX audit should focus next".`;
+• Create an experience-led audit using the required structured format (Journey Stage -> Cluster Summary -> Limitations).
+• Every finding MUST belong to the final issue list.
+• DO NOT add, remove, or suppress ANY issues from the final list. Do not revalidate them or hide visually mapped issues.
+• Map your findings to the Journey Stages (Discovery, Evaluation, Action, Retention) based on the provided list.
+• Ensure issues are categorised correctly under their respective Clusters based on the provided list.
+• Use the 'Evidence Summary' directly from the issue list for the 'Evidence' segment.
+• For action-dependent flows, if the crawl cannot perform the action, cover it under "Coverage & Limitations".`;
 }

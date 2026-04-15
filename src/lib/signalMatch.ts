@@ -3,7 +3,8 @@ import type { Issue } from './ux'; // import whatever the Issue type is called i
 export type SignalMatchResult = {
   issue_id: string;
   matched_signals: string[];
-  score: number; // 0.0 – 1.0
+  score: number; // Represents evidenceStrength: 1.0 (strong), 0.6 (weak), 0.3 (none)
+  negPenaltyFactor: number; // 0.4 for partial negative match, 1.0 otherwise
   is_absence_issue: boolean;
   suppressed: boolean;
   suppression_reason?: string;
@@ -78,7 +79,8 @@ export function deterministicSignalCheck(
       return {
         issue_id: issue.issue_id ?? '',
         matched_signals: [],
-        score: 0,
+        score: 0.3, // "none" evidence baseline
+        negPenaltyFactor: 1.0, // Suppressed anyway
         is_absence_issue: isAbsence,
         suppressed: true,
         suppression_reason: `Explicit contradiction: negative signal "${neg}" strongly present (${Math.round(negOverlap * 100)}% term overlap) with minimal positive evidence (${Math.round(maxPosOverlap * 100)}%)`,
@@ -100,8 +102,6 @@ export function deterministicSignalCheck(
     }
   }
 
-  const rawScore = signals.length > 0 ? matched.length / signals.length : 0;
-
   // ── Step 3: Absence issues ────────────────────────────────────────────────
   if (isAbsence) {
     const pageTypes: string[] = (issue as any).page_type ?? [];
@@ -113,12 +113,13 @@ export function deterministicSignalCheck(
         PAGE_TYPE_URL_PATTERNS[ptLower]?.test((issue as any).page_url ?? '')
       );
     });
-    const featureAbsent = rawScore === 0; // no positive signals found = feature is missing
+    const featureAbsent = matched.length === 0; // no positive signals found = feature is missing
     if (pageTypeConfirmed && featureAbsent) {
       return {
         issue_id: issue.issue_id ?? '',
         matched_signals: [],
-        score: 0.8 * negPenaltyFactor,
+        score: 1.0, // Full evidence for absence issue
+        negPenaltyFactor, 
         is_absence_issue: true,
         suppressed: false,
         keywordScore,
@@ -127,7 +128,8 @@ export function deterministicSignalCheck(
       return {
         issue_id: issue.issue_id ?? '',
         matched_signals: [],
-        score: 0,
+        score: 0.3,
+        negPenaltyFactor: 1.0,
         is_absence_issue: true,
         suppressed: true,
         suppression_reason: 'Page type not confirmed in crawl or screenshot evidence',
@@ -136,35 +138,23 @@ export function deterministicSignalCheck(
     }
   }
 
-  // ── Step 4: Presence issues — penalty model (no hard drop for zero score) ──
-  if (rawScore === 0 && !isAbsence) {
-    // No signals matched at all → very low score, penalized but NOT suppressed.
-    // These will naturally rank below any issue with real evidence.
-    return {
-      issue_id: issue.issue_id ?? '',
-      matched_signals: [],
-      score: 0.15 * negPenaltyFactor, // floor penalty
-      is_absence_issue: false,
-      suppressed: false,
-      penalized: true,
-      penaltyReason: 'No positive signals matched in crawl or screenshot text',
-      keywordScore,
-    };
-  }
-
-  // Weak evidence: only 1 signal matched → mild penalty
-  let finalScore = rawScore;
+  // ── Step 4: Presence issues — evidenceStrength mapping ──
+  
+  let evidenceStrength = 0.3; // Default none
   let penalized = false;
   let penaltyReason: string | undefined;
 
-  if (matched.length === 1 && signals.length > 1) {
-    finalScore = rawScore * 0.75;
+  if (matched.length >= 2 || (matched.length === 1 && signals.length === 1)) {
+    evidenceStrength = 1.0; // Strong
+  } else if (matched.length === 1 && signals.length > 1) {
+    evidenceStrength = 0.6; // Weak
     penalized = true;
     penaltyReason = `Only 1 of ${signals.length} signals matched (weak evidence)`;
+  } else if (matched.length === 0 && !isAbsence) {
+    evidenceStrength = 0.3; // None
+    penalized = true;
+    penaltyReason = 'No positive signals matched in crawl or screenshot text';
   }
-
-  // Apply negative penalty
-  finalScore = finalScore * negPenaltyFactor;
 
   if (negPenaltyFactor < 1.0) {
     penalized = true;
@@ -174,7 +164,8 @@ export function deterministicSignalCheck(
   return {
     issue_id: issue.issue_id ?? '',
     matched_signals: matched,
-    score: finalScore,
+    score: evidenceStrength, // Pass un-penalized evidence component
+    negPenaltyFactor,
     is_absence_issue: isAbsence,
     suppressed: false,
     penalized,
