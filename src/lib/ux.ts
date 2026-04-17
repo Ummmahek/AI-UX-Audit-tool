@@ -152,6 +152,41 @@ function keywordScore(
   return overlap + synonymBonus + confidenceBonus + priorityBonus + stageBoost;
 }
 
+function buildIssueSemanticText(issue: Issue): string {
+  const parts: string[] = [];
+
+  for (const key of ["issue_title", "user_problem", "recommendation"]) {
+    const value = issue[key];
+    if (typeof value === "string" && value.trim().length > 0) {
+      parts.push(value.trim());
+    }
+  }
+
+  if (Array.isArray(issue.signals_to_detect) && issue.signals_to_detect.length > 0) {
+    parts.push(issue.signals_to_detect.join(" "));
+  }
+
+  return parts.join(" ").toLowerCase();
+}
+
+function buildAuditSemanticQuery(goal: string, crawlExcerpts?: string, screenshotText = ""): string {
+  return `${goal ?? ""} ${crawlExcerpts ?? ""} ${screenshotText ?? ""}`
+    .trim()
+    .toLowerCase();
+}
+
+function semanticSimilarity(auditQuery: string, issueText: string): number {
+  const queryTokens = new Set(auditQuery.match(/\b[a-z0-9]{3,}\b/g) ?? []);
+  const issueTokens = new Set(issueText.match(/\b[a-z0-9]{3,}\b/g) ?? []);
+
+  if (queryTokens.size === 0 || issueTokens.size === 0) return 0;
+
+  const common = [...queryTokens].filter((token) => issueTokens.has(token)).length;
+  const union = new Set([...queryTokens, ...issueTokens]).size;
+  const similarity = union === 0 ? 0 : common / union;
+  return Math.min(Math.max(similarity, 0), 1);
+}
+
 /**
  * Checks if an issue's signals are present in the crawl excerpts.
  * Now supports multi-pattern detection: if ANY signal pattern matches, it counts as evidence.
@@ -448,17 +483,29 @@ export function simpleRetrieveIssues(
   const presenceIssues = filteredLibrary.filter((issue) => detectionType(issue) !== "absence");
   const absenceIssues = filteredLibrary.filter((issue) => detectionType(issue) === "absence");
 
+  type CandidateEntry = {
+    issue: Issue;
+    keywordScore: number;
+    semanticScore?: number;
+    source?: "absence-track" | "image-detection";
+  };
+
   // Step 1 (presence track): Keyword-based scoring (broadened query for better recall)
+  const auditSemanticQuery = buildAuditSemanticQuery(goal, crawlExcerpts, screenshotText);
   const keywordScored = presenceIssues
-    .map((issue) => ({
-      issue,
-      keywordScore: keywordScore(issue, url, goal, crawlExcerpts, screenshotText),
-    }))
-    .sort((a, b) => b.keywordScore - a.keywordScore);
+    .map((issue) => {
+      const semanticScore = semanticSimilarity(auditSemanticQuery, buildIssueSemanticText(issue));
+      return {
+        issue,
+        keywordScore: keywordScore(issue, url, goal, crawlExcerpts, screenshotText),
+        semanticScore,
+      };
+    })
+    .sort((a, b) => (b.keywordScore + b.semanticScore * 0.25) - (a.keywordScore + a.semanticScore * 0.25));
 
   // Fallback (presence track): if keyword matching is weak, include high-confidence library items
   const candidateCap = Math.max(topK * 4, 24);
-  let candidates = keywordScored
+  let candidates: CandidateEntry[] = keywordScored
     .filter((entry) => entry.keywordScore > 0)
     .slice(0, candidateCap);
 
@@ -518,7 +565,6 @@ export function simpleRetrieveIssues(
   }
 
   // Image-detection pass: force-include issues confirmed by direct visual inspection
-  type CandidateEntry = { issue: Issue; keywordScore: number; source?: "absence-track" | "image-detection" };
   if (imageDetected && imageDetected.length > 0) {
     const seenIds = new Set((candidates as CandidateEntry[]).map((c) => c.issue.issue_id).filter(Boolean));
     const byId = new Map<string, Issue>();
@@ -553,8 +599,8 @@ export function simpleRetrieveIssues(
       return {
         ...entry,
         evidenceScore: bestEv,
-        // Updated weights: 40% keyword, 60% best evidence (crawl or screenshot)
-        combinedScore: entry.keywordScore * 0.4 + bestEv * 0.6,
+        // Updated weights: 40% keyword, 60% best evidence (crawl or screenshot), plus semantic similarity boost
+        combinedScore: entry.keywordScore * 0.4 + bestEv * 0.6 + (entry.semanticScore ?? 0) * 0.25,
       };
     });
 
