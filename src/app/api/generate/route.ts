@@ -240,6 +240,7 @@ export async function POST(request: Request) {
         hasScreenshots = allScreenshotUrls.length > 0;
 
         // detect site type EARLY using crawl context/text
+        console.log(' ######## [API] url:', url);
         siteTypeDetection = detectSiteType(crawlContext, url);
         console.log(`[API] Site Type: ${siteTypeDetection.type} (${siteTypeDetection.confidence})`);
 

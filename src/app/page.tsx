@@ -954,7 +954,6 @@ export default function Home() {
                 {error}
               </div>
             ) : null}
-            {hasSubmitted ? (
               <div className="space-y-4 pt-6">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
@@ -1027,6 +1026,19 @@ export default function Home() {
                     onClick={() =>
                       setForm((prev) => ({
                         ...prev,
+                        url: "https://www.poplify.com/",
+                        goal: "Improve checkout conversion and reduce drop-offs on the checkout page",
+                      }))
+                    }
+                    className="rounded-full border border-slate-200 bg-white px-3 py-1 hover:border-emerald-300 hover:text-emerald-700"
+                  >
+                    Poplify sample
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm((prev) => ({
+                        ...prev,
                         url: "https://www.example.com/",
                         goal: "Understand friction on a generic e-commerce flow",
                       }))
@@ -1037,7 +1049,6 @@ export default function Home() {
                   </button>
                 </div>
               </div>
-            ) : null}
           </div>
         </section>
 
