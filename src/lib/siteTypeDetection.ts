@@ -1,42 +1,202 @@
-export function detectFromURL(url: string, title?: string): {
-  type: string;
-  confidence: 'medium' | 'low';
-  evidence: string[];
-} {
-  const urlLower = url.toLowerCase();
-  const titleLower = (title || '').toLowerCase();
-  const combined = urlLower + ' ' + titleLower;
+export type SiteType = 'real_estate' | 'saas' | 'corporate' | 'unknown';
 
-  if (combined.includes('residences') || combined.includes('properties') || combined.includes('realestate') || combined.includes('estate') || combined.includes('marina')) {
-    return {
-      type: 'real_estate',
-      confidence: 'medium',
-      evidence: ['URL/Title contains real estate indicators'],
-    };
+export type Scores = {
+  real_estate: number;
+  saas: number;
+  corporate: number;
+};
+
+export function isBlockedPage(text: string): boolean {
+  if (!text) return false;
+  const t = text.toLowerCase();
+
+  return (
+    t.includes('access denied') ||
+    t.includes('forbidden') ||
+    t.includes('not allowed') ||
+    t.includes('error 403')
+  );
+}
+
+const DOMAIN_CACHE = new Map<string, SiteType>();
+
+export function scoreFromUrl(url: string, scores: Scores) {
+  const u = url.toLowerCase();
+
+  // Real estate signals
+  if (u.includes('property')) scores.real_estate += 2;
+  if (u.includes('properties')) scores.real_estate += 2;
+  if (u.includes('listing')) scores.real_estate += 2;
+  if (u.includes('project')) scores.real_estate += 1;
+
+  // SaaS signals
+  if (u.includes('app')) scores.saas += 2;
+  if (u.includes('dashboard')) scores.saas += 2;
+  if (u.includes('login')) scores.saas += 2;
+  if (u.includes('signup')) scores.saas += 2;
+  if (u.includes('pricing')) scores.saas += 1;
+}
+
+export function scoreFromSubdomain(domain: string, scores: Scores) {
+  const d = domain.toLowerCase();
+
+  if (d.startsWith('app.')) scores.saas += 3;
+  if (d.startsWith('dashboard.')) scores.saas += 3;
+  if (d.includes('project.')) scores.real_estate += 2;
+}
+
+export function scoreFromHtml(html: string, scores: Scores) {
+  const h = html.toLowerCase();
+
+  // SaaS: auth patterns
+  if (h.includes('password') && h.includes('login')) {
+    scores.saas += 3;
   }
 
-  if (urlLower.includes('shop') || urlLower.includes('store') || urlLower.includes('cart')) {
-    return {
-      type: 'ecommerce',
-      confidence: 'medium',
-      evidence: ['URL contains ecommerce indicators'],
-    };
+  // SaaS: CTA patterns
+  if (h.includes('free trial') || h.includes('book a demo')) {
+    scores.saas += 2;
   }
 
-  if (urlLower.includes('blog') || urlLower.includes('news') || urlLower.includes('article')) {
-    return {
-      type: 'content',
-      confidence: 'medium',
-      evidence: ['URL contains content indicators'],
-    };
+  // Real estate: property patterns
+  if (h.includes('bhk') && h.includes('sqft')) {
+    scores.real_estate += 3;
   }
 
-  console.warn('[SITE TYPE] Could not reliably detect site type, defaulting to corporate');
-  return {
-    type: 'corporate',
-    confidence: 'low',
-    evidence: ['Fallback: insufficient data'],
+  if (h.includes('rera')) {
+    scores.real_estate += 3;
+  }
+
+  // Form intent detection
+  if (h.includes('budget') && h.includes('location')) {
+    scores.real_estate += 2;
+  }
+}
+
+export function scoreFromLinks(html: string, scores: Scores) {
+  const linkCount = (html.match(/<a /gi) || []).length;
+
+  if (linkCount > 50) {
+    scores.real_estate += 2; // marketplaces tend to have many listings
+  }
+
+  if (linkCount < 10) {
+    scores.corporate += 1; // simple marketing sites
+  }
+}
+
+export function scoreFromMeta(meta: { title?: string; description?: string }, scores: Scores) {
+  const text = `${meta.title || ''} ${meta.description || ''}`.toLowerCase();
+
+  if (
+    text.includes('buy property') ||
+    text.includes('flats for sale') ||
+    text.includes('real estate')
+  ) {
+    scores.real_estate += 2;
+  }
+
+  if (
+    text.includes('free trial') ||
+    text.includes('saas') ||
+    text.includes('platform')
+  ) {
+    scores.saas += 2;
+  }
+}
+
+export function finalize(scores: Scores): SiteType {
+  const { real_estate, saas, corporate } = scores;
+
+  if (real_estate >= 3 && real_estate > saas) return 'real_estate';
+  if (saas >= 3 && saas > real_estate) return 'saas';
+
+  if (real_estate === 0 && saas === 0) {
+    return 'unknown';
+  }
+
+  return real_estate > saas ? 'real_estate' : 'saas';
+}
+
+export function runScoringPipeline(input: { url: string; domain: string; html: string; meta: { title?: string; description?: string } }): SiteType {
+  const { url, domain, html, meta } = input;
+
+  const scores: Scores = {
+    real_estate: 0,
+    saas: 0,
+    corporate: 0
   };
+
+  if (url) scoreFromUrl(url, scores);
+  if (domain) scoreFromSubdomain(domain, scores);
+
+  if (html) {
+    scoreFromHtml(html, scores);
+    scoreFromLinks(html, scores);
+  }
+
+  if (meta) {
+    scoreFromMeta(meta, scores);
+  }
+
+  return finalize(scores);
+}
+
+export function detectFromDomainOnly(url: string): SiteType {
+  let domain = '';
+  try {
+    domain = new URL(url).hostname.toLowerCase();
+  } catch (e) {
+    return 'unknown';
+  }
+
+  const score = {
+    real_estate: 0,
+    saas: 0
+  };
+
+  // Tokenize domain (split by dots, dashes, numbers)
+  const tokens = domain.split(/[\.\-0-9]/).filter(Boolean);
+
+  // Real estate signals
+  const realEstateHints = [
+    'acre',
+    'property',
+    'realty',
+    'estate',
+    'housing',
+    'homes'
+  ];
+
+  for (const token of tokens) {
+    if (realEstateHints.includes(token)) {
+      score.real_estate += 2;
+    }
+  }
+
+  // SaaS signals
+  const saasHints = [
+    'app',
+    'cloud',
+    'tech',
+    'hq'
+  ];
+
+  for (const token of tokens) {
+    if (saasHints.includes(token)) {
+      score.saas += 2;
+    }
+  }
+
+  // Special pattern: number + "acre" (e.g., 99acres)
+  if (domain.match(/\d+.*acre|acre.*\d+/)) {
+    score.real_estate += 3;
+  }
+
+  if (score.real_estate >= 2) return 'real_estate';
+  if (score.saas >= 2) return 'saas';
+
+  return 'unknown';
 }
 
 export function detectSiteType(
@@ -48,124 +208,45 @@ export function detectSiteType(
   confidence: 'high' | 'medium' | 'low';
   evidence: string[];
 } {
-  const urlLower = url.toLowerCase();
-  const extractedTitle = (title || bodyText.match(/Title:\s*(.+)/i)?.[1] || '').toLowerCase();
-  const extractedMeta = (bodyText.match(/Meta:\s*(.+)/i)?.[1] || '').toLowerCase();
-  const rawText = bodyText.toLowerCase();
-
-  const isBlocked = rawText.includes('access denied') || rawText.includes('security check') || rawText.includes('cloudflare') || rawText.includes('unusual traffic');
-  const isSparse = rawText.length < 500;
-
-  if ((isBlocked || isSparse) && !extractedTitle && !extractedMeta) {
-    console.log('[SITE TYPE] Content blocked/sparse and no metadata. Using URL fallback.');
-    return detectFromURL(url, title);
+  let domain = '';
+  try {
+    domain = new URL(url).hostname;
+  } catch (e) {
+    // Ignore invalid URLs
   }
 
-  type Config = { strong: string[]; weak: string[]; strongWeight: number; weakWeight: number };
-  
-  const indicators: Record<string, Config> = {
-    ecommerce: {
-      strong: ['add to cart', 'shopping cart', 'buy now', 'add to bag', 'checkout'],
-      weak: ['shop', 'price:', ' cart ', 'basket'],
-      strongWeight: 3,
-      weakWeight: 1,
-    },
-    'real_estate': {
-      strong: ['property', 'properties', 'real estate', 'schedule viewing', 'floor plan', 'residences', 'marina', 'villas', 'penthouses', 'apartments', 'waterfront destination'],
-      weak: ['bedroom', 'bedrooms', 'bathroom', 'sqft', 'sq ft', 'enquire', 'register your interest'],
-      strongWeight: 3,
-      weakWeight: 1.2,
-    },
-    saas: {
-      strong: ['sign up', 'free trial', 'pricing', 'api', 'dashboard'],
-      weak: ['workspace', 'upgrade'],
-      strongWeight: 3,
-      weakWeight: 1,
-    },
-    content: {
-      strong: ['article', 'blog', 'published', 'author'],
-      weak: ['read more', 'category', 'posted'],
-      strongWeight: 3,
-      weakWeight: 1,
-    },
-    corporate: {
-      strong: ['about us', 'our services', 'case studies', 'our team'],
-      weak: ['contact us', 'request quote', 'solutions'],
-      strongWeight: 3,
-      weakWeight: 0.8,
-    },
-  };
+  let type: SiteType = 'unknown';
+  let evidenceStr = 'Score-based detection resulted in';
 
-  const scores: Record<string, number> = {};
-  const evidenceMap: Record<string, string[]> = {};
-
-  const searchAreas = [
-    { text: extractedTitle, multiplier: 2 },
-    { text: extractedMeta, multiplier: 2 },
-    { text: urlLower, multiplier: 2 },
-    { text: rawText, multiplier: 1 }
-  ];
-
-  for (const [type, config] of Object.entries(indicators)) {
-    let score = 0;
-    const matches = new Set<string>();
-
-    for (const { text, multiplier } of searchAreas) {
-      if (!text) continue;
-      
-      for (const kw of config.strong) {
-        if (text.includes(kw)) {
-          score += config.strongWeight * multiplier;
-          matches.add(kw);
-        }
-      }
-      for (const kw of config.weak) {
-        if (text.includes(kw)) {
-          score += config.weakWeight * multiplier;
-          matches.add(kw);
-        }
-      }
-    }
-    scores[type] = score;
-    evidenceMap[type] = Array.from(matches).slice(0, 5);
+  // STEP A: Check cache first
+  if (domain && DOMAIN_CACHE.has(domain)) {
+    type = DOMAIN_CACHE.get(domain) as SiteType;
+    evidenceStr = 'Cache detection resulted in';
+  } else if (isBlockedPage(bodyText)) {
+    // STEP B: Handle blocked pages
+    type = detectFromDomainOnly(url);
+    if (domain) DOMAIN_CACHE.set(domain, type);
+    evidenceStr = 'Blocked page fallback detection resulted in';
+  } else {
+    // STEP C: Existing scoring system
+    type = runScoringPipeline({
+      url: url || '',
+      domain,
+      html: bodyText || '',
+      meta: { title }
+    });
+    // STEP D: Cache result
+    if (domain) DOMAIN_CACHE.set(domain, type);
   }
 
-  const sortedTypes = Object.entries(scores).sort((a, b) => b[1] - a[1]);
-  const [detectedType, score] = sortedTypes[0] as [string, number];
-
-  if (score === 0) {
-    if (isBlocked || isSparse) {
-      console.log('[SITE TYPE] Low confidence/blocked content, trying URL...');
-      return detectFromURL(url, title);
-    } else {
-      console.log('[SITE TYPE] No clear signals, defaulting to corporate');
-      return { type: 'corporate', confidence: 'low', evidence: ['Fallback: insufficient data'] };
-    }
+  let confidence: 'high' | 'medium' | 'low' = 'low';
+  if (type !== 'unknown' && type !== 'corporate') {
+      confidence = 'medium';
   }
-
-  let confidence: 'high' | 'medium' | 'low';
-  
-  if (score >= 6) confidence = 'high';
-  else if (score >= 3) confidence = 'medium';
-  else confidence = 'low';
-
-  if (confidence === 'low' && (isBlocked || isSparse)) {
-    console.log('[SITE TYPE] Low confidence from content due to sparse/blocked text. Using URL.');
-    return detectFromURL(url, title);
-  }
-
-  if (confidence === 'low' && detectedType === 'ecommerce') {
-    console.log('[SITE TYPE] Weak ecommerce signals. Falling back to corporate to be conservative.');
-    return { type: 'corporate', confidence: 'low', evidence: ['Fallback: weak ecommerce signals overridden'] };
-  }
-
-  console.log(`[SITE TYPE] Detected: ${detectedType} (confidence: ${confidence}, score: ${score})`);
-  console.log(`[SITE TYPE] Evidence:`, evidenceMap[detectedType]);
 
   return {
-    type: detectedType,
+    type,
     confidence,
-    evidence: evidenceMap[detectedType],
+    evidence: [`${evidenceStr} ${type}`]
   };
 }
-
