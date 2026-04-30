@@ -1027,7 +1027,7 @@ export default function Home() {
                       setForm((prev) => ({
                         ...prev,
                         url: "https://www.poplify.com/",
-                        goal: "Improve checkout conversion and reduce drop-offs on the checkout page",
+                        goal: "check this website",
                       }))
                     }
                     className="rounded-full border border-slate-200 bg-white px-3 py-1 hover:border-emerald-300 hover:text-emerald-700"
