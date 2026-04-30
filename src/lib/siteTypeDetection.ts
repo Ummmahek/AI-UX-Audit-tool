@@ -1,8 +1,9 @@
-export type SiteType = 'real_estate' | 'saas' | 'corporate' | 'unknown';
+export type SiteType = 'real_estate' | 'saas' | 'agency' | 'corporate' | 'unknown';
 
 export type Scores = {
   real_estate: number;
   saas: number;
+  agency: number;
   corporate: number;
 };
 
@@ -71,6 +72,30 @@ export function scoreFromHtml(html: string, scores: Scores) {
   if (h.includes('budget') && h.includes('location')) {
     scores.real_estate += 2;
   }
+
+  // --- AGENCY SIGNALS ---
+  if (
+    h.includes('we build') ||
+    h.includes('we create') ||
+    h.includes('we design') ||
+    h.includes('for startups') ||
+    h.includes('for brands') ||
+    h.includes('our work') ||
+    h.includes('case studies') ||
+    h.includes('our clients') ||
+    h.includes('portfolio')
+  ) {
+    scores.agency += 2;
+  }
+
+  // Strong agency patterns
+  if (
+    h.includes('digital agency') ||
+    h.includes('product studio') ||
+    h.includes('design studio')
+  ) {
+    scores.agency += 3;
+  }
 }
 
 export function scoreFromLinks(html: string, scores: Scores) {
@@ -103,19 +128,46 @@ export function scoreFromMeta(meta: { title?: string; description?: string }, sc
   ) {
     scores.saas += 2;
   }
+
+  if (
+    text.includes('agency') ||
+    text.includes('studio') ||
+    text.includes('product development') ||
+    text.includes('we build products')
+  ) {
+    scores.agency += 2;
+  }
+}
+
+export function hasWeakSignals(scores: Scores): boolean {
+  return (
+    scores.real_estate > 0 ||
+    scores.saas > 0 ||
+    scores.agency > 0
+  );
 }
 
 export function finalize(scores: Scores): SiteType {
-  const { real_estate, saas, corporate } = scores;
+  const { real_estate, saas, agency } = scores;
 
-  if (real_estate >= 3 && real_estate > saas) return 'real_estate';
-  if (saas >= 3 && saas > real_estate) return 'saas';
+  if (real_estate >= 3 && real_estate > saas && real_estate > agency) {
+    return 'real_estate';
+  }
 
-  if (real_estate === 0 && saas === 0) {
+  if (saas >= 3 && saas > real_estate && saas > agency) {
+    return 'saas';
+  }
+
+  if (agency >= 3 && agency > real_estate && agency > saas) {
+    return 'agency';
+  }
+
+  if (!hasWeakSignals(scores)) {
     return 'unknown';
   }
 
-  return real_estate > saas ? 'real_estate' : 'saas';
+  // DO NOT force classification
+  return 'unknown';
 }
 
 export function runScoringPipeline(input: { url: string; domain: string; html: string; meta: { title?: string; description?: string } }): SiteType {
@@ -124,6 +176,7 @@ export function runScoringPipeline(input: { url: string; domain: string; html: s
   const scores: Scores = {
     real_estate: 0,
     saas: 0,
+    agency: 0,
     corporate: 0
   };
 
@@ -152,7 +205,9 @@ export function detectFromDomainOnly(url: string): SiteType {
 
   const score = {
     real_estate: 0,
-    saas: 0
+    saas: 0,
+    agency: 0,
+    corporate: 0
   };
 
   // Tokenize domain (split by dots, dashes, numbers)
