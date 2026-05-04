@@ -1,6 +1,6 @@
 // universal crawler using playwright-extra + manual stealth
 
-// @ts-expect-error: missing playwright types in this workspace
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 import { chromium } from 'playwright-extra';
 
 // exported for other modules

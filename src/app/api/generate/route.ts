@@ -17,7 +17,7 @@ import {
 } from "@/lib/ux";
 import { crawlKeyPaths, type CrawlResult } from "@/lib/crawl";
 import { runDeterministicDetection } from '@/lib/detect';
-import { detectSiteType } from '@/lib/siteTypeDetection';
+import { detectSiteType, detectSiteTypeWithFallback } from '@/lib/siteTypeDetection';
 import { deterministicSignalCheck } from '@/lib/signalMatch';
 import { crawlWebsite, shouldUsePlaywright } from '@/lib/crawlPlaywright';
 
@@ -147,7 +147,8 @@ export async function POST(request: Request) {
       console.log('[PLAYWRIGHT] combinedBodyText sample:', combinedBodyText.slice(0, 200));
       if (shouldUse) {
         try {
-          const pwResult = await crawlWebsite(url);
+          const normalizedUrl = url.startsWith('http') ? url : `https://${url}`;
+          const pwResult = await crawlWebsite(normalizedUrl);
           if (!pwResult.blocked && pwResult.bodyText) {
             // convert to CrawlResult shape so outer logic stays the same
             crawlResult.pages = [
@@ -220,8 +221,8 @@ export async function POST(request: Request) {
     let suppressedIssues: Array<{ issue: RetrievedIssue; reason: string }> = [];
     let imageDetectedResults: ImageDetectedResult[] = [];
     let metadata: any = {}; // added for site type/terminology info
-    let siteTypeDetection: { type: string; confidence: 'high' | 'medium' | 'low'; evidence: string[] } = {
-      type: 'corporate',
+    let siteTypeDetection: { type: string; confidence: 'high' | 'medium' | 'low'; evidence: string[]; scores?: Record<string, number>; layer?: string } = {
+      type: 'unknown',
       confidence: 'low',
       evidence: [],
     };
@@ -240,8 +241,14 @@ export async function POST(request: Request) {
         hasScreenshots = allScreenshotUrls.length > 0;
 
         // detect site type EARLY using crawl context/text
-        siteTypeDetection = detectSiteType(crawlContext, url);
-        console.log(`[API] Site Type: ${siteTypeDetection.type} (${siteTypeDetection.confidence})`);
+        // Extract title/description from first crawl page for richer meta scoring
+        const firstPage = crawlResult.pages[0];
+        const crawlTitle = (firstPage as any)?.title ?? '';
+        const crawlDescription = (firstPage as any)?.description ?? '';
+        siteTypeDetection = await detectSiteTypeWithFallback(crawlContext, url, crawlTitle, crawlDescription);
+        console.log(`[API] Site Type: ${siteTypeDetection.type} (${siteTypeDetection.confidence}) via ${(siteTypeDetection as any).layer}`);
+        console.log(`[API] Detection scores:`, JSON.stringify((siteTypeDetection as any).scores ?? {}));
+        console.log(`[API] Detection evidence:`, siteTypeDetection.evidence.slice(0, 5));
 
         // filter applicable issues before any vision pass
         const applicableIssues = filterApplicableIssues(issueLibrary, siteTypeDetection.type);

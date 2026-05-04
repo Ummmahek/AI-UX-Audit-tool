@@ -1,6 +1,6 @@
-﻿import fs from "fs/promises";
+import fs from "fs/promises";
 import path from "path";
-import { detectSiteType } from "./siteTypeDetection";
+import { detectSiteType, detectSiteTypeWithFallback } from "./siteTypeDetection";
 import { buildDynamicSystemPrompt, buildDynamicUserPrompt } from "./prompts";
 
 export type Issue = {
@@ -438,7 +438,7 @@ export async function retrieveRelevantIssues(
   // use robust detection only when the caller has not already provided a site type
   const detection = siteTypeOverride
     ? { type: siteTypeOverride, confidence: 'medium' as const, evidence: [] as string[] }
-    : detectSiteType(crawlExcerpts ?? '', url);
+    : await detectSiteTypeWithFallback(crawlExcerpts ?? '', url);
   const siteType = detection.type;
   const applicableIssues = filterLibraryForSiteType(library, siteType);
   const terminology = getTerminology(siteType);
