@@ -1,6 +1,4 @@
 // universal crawler using playwright-extra + manual stealth
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 import { chromium } from 'playwright-extra';
 
 // exported for other modules

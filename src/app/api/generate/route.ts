@@ -17,7 +17,7 @@ import {
 } from "@/lib/ux";
 import { crawlKeyPaths, type CrawlResult } from "@/lib/crawl";
 import { runDeterministicDetection } from '@/lib/detect';
-import { detectSiteType, detectSiteTypeWithFallback } from '@/lib/siteTypeDetection';
+import { detectSiteTypeWithFallback } from '@/lib/siteTypeDetection';
 import { deterministicSignalCheck } from '@/lib/signalMatch';
 import { crawlWebsite, shouldUsePlaywright } from '@/lib/crawlPlaywright';
 
@@ -136,6 +136,7 @@ export async function POST(request: Request) {
 
     // Crawl key paths to provide evidence-rich context (secure + best-effort).
     let crawlResult: CrawlResult = { pages: [], targetUrl: '', blockedOrLimited: false };
+    let crawlStatus: { blocked?: boolean; failed?: boolean; bodyLength?: number } = {};
     try {
       crawlResult = await crawlKeyPaths(url);
 
@@ -147,8 +148,12 @@ export async function POST(request: Request) {
       console.log('[PLAYWRIGHT] combinedBodyText sample:', combinedBodyText.slice(0, 200));
       if (shouldUse) {
         try {
-          const normalizedUrl = url.startsWith('http') ? url : `https://${url}`;
-          const pwResult = await crawlWebsite(normalizedUrl);
+          const pwResult = await crawlWebsite(url);
+          crawlStatus = {
+            blocked: pwResult.blocked,
+            failed: false,
+            bodyLength: pwResult.bodyText ? pwResult.bodyText.length : 0,
+          };
           if (!pwResult.blocked && pwResult.bodyText) {
             // convert to CrawlResult shape so outer logic stays the same
             crawlResult.pages = [
@@ -164,8 +169,20 @@ export async function POST(request: Request) {
           }
         } catch (err) {
           console.error('[PLAYWRIGHT] crawlWebsite failed:', err);
+          crawlStatus = {
+            blocked: false,
+            failed: true,
+            bodyLength: 0,
+          };
           // Playwright failed — continue with cheerio result
         }
+      } else {
+        // Cheerio crawl - assume not blocked if we got content
+        crawlStatus = {
+          blocked: false,
+          failed: false,
+          bodyLength: combinedBodyText.length,
+        };
       }
 
       // collect any screenshots produced by the crawler
@@ -221,8 +238,8 @@ export async function POST(request: Request) {
     let suppressedIssues: Array<{ issue: RetrievedIssue; reason: string }> = [];
     let imageDetectedResults: ImageDetectedResult[] = [];
     let metadata: any = {}; // added for site type/terminology info
-    let siteTypeDetection: { type: string; confidence: 'high' | 'medium' | 'low'; evidence: string[]; scores?: Record<string, number>; layer?: string } = {
-      type: 'unknown',
+    let siteTypeDetection: { type: string; confidence: 'high' | 'medium' | 'low'; evidence: string[] } = {
+      type: 'corporate',
       confidence: 'low',
       evidence: [],
     };
@@ -240,15 +257,23 @@ export async function POST(request: Request) {
         allScreenshotUrls.push(...userScreenshotUrls);
         hasScreenshots = allScreenshotUrls.length > 0;
 
-        // detect site type EARLY using crawl context/text
-        // Extract title/description from first crawl page for richer meta scoring
-        const firstPage = crawlResult.pages[0];
-        const crawlTitle = (firstPage as any)?.title ?? '';
-        const crawlDescription = (firstPage as any)?.description ?? '';
-        siteTypeDetection = await detectSiteTypeWithFallback(crawlContext, url, crawlTitle, crawlDescription);
-        console.log(`[API] Site Type: ${siteTypeDetection.type} (${siteTypeDetection.confidence}) via ${(siteTypeDetection as any).layer}`);
-        console.log(`[API] Detection scores:`, JSON.stringify((siteTypeDetection as any).scores ?? {}));
-        console.log(`[API] Detection evidence:`, siteTypeDetection.evidence.slice(0, 5));
+        // detect site type EARLY using clean crawl text, not wrapper context
+        const siteTypeText = crawlResult.pages
+          .map((p) => p.excerpt ?? '')
+          .filter(Boolean)
+          .join('\n\n');
+        const normalizedUrl = url; // assuming url is already normalized, or we can normalize it
+        siteTypeDetection = await detectSiteTypeWithFallback(
+          siteTypeText,
+          normalizedUrl,
+          undefined,
+          undefined,
+          {
+            // pass any meta/enrichment available here
+          },
+          crawlStatus
+        );
+        console.log(`[API] Site Type: ${siteTypeDetection.type} (${siteTypeDetection.confidence})`);
 
         // filter applicable issues before any vision pass
         const applicableIssues = filterApplicableIssues(issueLibrary, siteTypeDetection.type);

@@ -1,4 +1,4 @@
-import fs from "fs/promises";
+﻿import fs from "fs/promises";
 import path from "path";
 import { detectSiteType, detectSiteTypeWithFallback } from "./siteTypeDetection";
 import { buildDynamicSystemPrompt, buildDynamicUserPrompt } from "./prompts";
