@@ -268,10 +268,9 @@ export async function POST(request: Request) {
           normalizedUrl,
           undefined,
           undefined,
-          {
-            // pass any meta/enrichment available here
-          },
-          crawlStatus
+          {},
+          crawlStatus,
+          claudeKey || undefined,
         );
         console.log(`[API] Site Type: ${siteTypeDetection.type} (${siteTypeDetection.confidence})`);
 

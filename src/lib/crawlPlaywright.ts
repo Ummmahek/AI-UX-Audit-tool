@@ -17,13 +17,17 @@ export async function crawlWebsite(
   screenshots: Buffer[];
   blocked: boolean;
 }> {
-  const { timeout = 60000, handleCookieConsent = true, maxRetries = 2 } = options;
+  const { timeout = 20000, handleCookieConsent = true, maxRetries = 2 } = options;
+  // 'networkidle' avoided — analytics/polling prevents it from ever firing on many sites.
+  const waitStrategies: Array<'domcontentloaded' | 'load'> = ['domcontentloaded', 'load'];
   let attempt = 0;
 
   while (attempt < maxRetries) {
+    const waitUntil = waitStrategies[Math.min(attempt, waitStrategies.length - 1)];
+    const attemptTimeout = attempt === 0 ? timeout : Math.round(timeout * 1.5);
     let browser;
     try {
-      console.log(`[CRAWLER] attempt ${attempt + 1}/${maxRetries} – ${url}`);
+      console.log(`[CRAWLER] attempt ${attempt + 1}/${maxRetries} – ${url} (waitUntil=${waitUntil}, timeout=${attemptTimeout}ms)`);
       browser = await chromium.launch({
         headless: true,
         args: [
@@ -72,7 +76,7 @@ export async function crawlWebsite(
         'Upgrade-Insecure-Requests': '1',
       });
 
-      const response = await page.goto(url, { waitUntil: 'networkidle', timeout });
+      const response = await page.goto(url, { waitUntil, timeout: attemptTimeout });
       const status = response?.status();
       if (status && status >= 400) {
         console.warn(`[CRAWLER] HTTP ${status}`);

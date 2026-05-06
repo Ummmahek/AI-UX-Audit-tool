@@ -389,7 +389,18 @@ function scoreFromEnrichment(enrichment: DetectionEnrichment | undefined, scores
   const evidence: string[] = [];
   if (!enrichment) return evidence;
 
-  const { sitemapText, manifestText, searchSnippet, headers, redirectUrls } = enrichment;
+  const { robotsText, sitemapText, manifestText, searchSnippet, headers, redirectUrls } = enrichment;
+
+  if (robotsText) {
+    const text = robotsText.toLowerCase();
+    if (/disallow:.*\/(cart|checkout|order|payment|shop)/.test(text)) { scores.ecommerce += 4; evidence.push('robots: ecommerce paths (+4)'); }
+    if (/disallow:.*\/(app|dashboard|account|settings|billing)/.test(text)) { scores.saas += 4; evidence.push('robots: saas paths (+4)'); }
+    if (/disallow:.*\/(listing|property|rent|sale|mls)/.test(text)) { scores.real_estate += 4; evidence.push('robots: real estate paths (+4)'); }
+    if (/disallow:.*\/(wp-admin|wp-content|xmlrpc)/.test(text)) { scores.cms += 4; evidence.push('robots: wordpress paths (+4)'); }
+    if (/disallow:.*\/(loan|wallet|invest|trade|portfolio)/.test(text)) { scores.finance += 4; evidence.push('robots: finance paths (+4)'); }
+    if (/disallow:.*\/(vendor|seller|marketplace|sell)/.test(text)) { scores.marketplace += 4; evidence.push('robots: marketplace paths (+4)'); }
+    if (/disallow:.*\/(work|case-stud|portfolio|client)/.test(text)) { scores.agency += 3; evidence.push('robots: agency paths (+3)'); }
+  }
 
   if (sitemapText) {
     const text = sitemapText.toLowerCase();
@@ -1193,7 +1204,7 @@ async function duckDuckGoMultiSearch(rootDomain: string): Promise<{
 
 const META_FETCH_TIMEOUT_MS = 8000;
 
-async function fetchSiteMeta(url: string): Promise<{ title: string; description: string; ogDescription: string }> {
+async function fetchSiteMeta(url: string): Promise<{ title: string; description: string; ogDescription: string; ogType: string; keywords: string; ogSiteName: string }> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), META_FETCH_TIMEOUT_MS);
   try {
@@ -1210,7 +1221,7 @@ async function fetchSiteMeta(url: string): Promise<{ title: string; description:
     clearTimeout(timer);
     if (!res.ok) {
       console.warn(`[META FETCH] HTTP ${res.status}`);
-      return { title: '', description: '', ogDescription: '' };
+      return { title: '', description: '', ogDescription: '', ogType: '', keywords: '', ogSiteName: '' };
     }
     // Only read first 20KB — meta tags are always in <head>
     const reader = res.body?.getReader();
@@ -1232,26 +1243,128 @@ async function fetchSiteMeta(url: string): Promise<{ title: string; description:
     const ogMatch =
       html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']{1,500})["']/i) ||
       html.match(/<meta[^>]+content=["']([^"']{1,500})["'][^>]+property=["']og:description["']/i);
+    const ogTypeMatch =
+      html.match(/<meta[^>]+property=["']og:type["'][^>]+content=["']([^"']{1,100})["']/i) ||
+      html.match(/<meta[^>]+content=["']([^"']{1,100})["'][^>]+property=["']og:type["']/i);
+    const ogSiteNameMatch =
+      html.match(/<meta[^>]+property=["']og:site_name["'][^>]+content=["']([^"']{1,200})["']/i) ||
+      html.match(/<meta[^>]+content=["']([^"']{1,200})["'][^>]+property=["']og:site_name["']/i);
+    const keywordsMatch =
+      html.match(/<meta[^>]+name=["']keywords["'][^>]+content=["']([^"']{1,500})["']/i) ||
+      html.match(/<meta[^>]+content=["']([^"']{1,500})["'][^>]+name=["']keywords["']/i);
+    const twitterDescMatch =
+      html.match(/<meta[^>]+name=["']twitter:description["'][^>]+content=["']([^"']{1,500})["']/i) ||
+      html.match(/<meta[^>]+content=["']([^"']{1,500})["'][^>]+name=["']twitter:description["']/i);
 
     const result = {
       title: titleMatch?.[1]?.trim() ?? '',
-      description: descMatch?.[1]?.trim() ?? '',
+      description: descMatch?.[1]?.trim() || twitterDescMatch?.[1]?.trim() || '',
       ogDescription: ogMatch?.[1]?.trim() ?? '',
+      ogType: ogTypeMatch?.[1]?.trim() ?? '',
+      ogSiteName: ogSiteNameMatch?.[1]?.trim() ?? '',
+      keywords: keywordsMatch?.[1]?.trim() ?? '',
     };
-    console.log(`[META FETCH] title="${result.title.slice(0, 60)}" desc="${(result.description || result.ogDescription).slice(0, 80)}"`);
+    console.log(`[META FETCH] title="${result.title.slice(0, 60)}" desc="${(result.description || result.ogDescription).slice(0, 80)}" ogType="${result.ogType}" keywords="${result.keywords.slice(0, 60)}"`);
     return result;
   } catch (err: unknown) {
     clearTimeout(timer);
     const isTimeout = err instanceof Error && err.name === 'AbortError';
     console.warn(`[META FETCH] ${isTimeout ? 'timed out' : 'failed'}: ${err instanceof Error ? err.message : err}`);
-    return { title: '', description: '', ogDescription: '' };
+    return { title: '', description: '', ogDescription: '', ogType: '', keywords: '', ogSiteName: '' };
+  }
+}
+
+const ROBOTS_FETCH_TIMEOUT_MS = 5000;
+
+async function fetchRobotsAndSitemap(url: string): Promise<{ robotsText: string; sitemapText: string }> {
+  const base = normalizeUrl(url).replace(/\/$/, '');
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (compatible; UXAuditBot/1.0)',
+    'Accept': 'text/plain,text/xml,*/*',
+  };
+
+  async function fetchText(path: string): Promise<string> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ROBOTS_FETCH_TIMEOUT_MS);
+    try {
+      const res = await fetch(`${base}${path}`, { signal: controller.signal, headers });
+      clearTimeout(timer);
+      if (!res.ok) return '';
+      const text = await res.text();
+      return text.slice(0, 30000);
+    } catch {
+      clearTimeout(timer);
+      return '';
+    }
+  }
+
+  const [robotsText, sitemapText] = await Promise.all([
+    fetchText('/robots.txt'),
+    fetchText('/sitemap.xml').then(t => t || fetchText('/sitemap_index.xml')),
+  ]);
+
+  if (robotsText) console.log(`[ROBOTS] fetched ${robotsText.length} chars`);
+  if (sitemapText) console.log(`[SITEMAP] fetched ${sitemapText.length} chars`);
+
+  return { robotsText, sitemapText };
+}
+
+async function llmClassifySite(
+  domain: string,
+  title: string,
+  claudeApiKey: string,
+): Promise<{ type: SiteType; confidence: 'low' | 'medium' | 'high' } | null> {
+  const VALID_TYPES: SiteType[] = ['ecommerce', 'marketplace', 'saas', 'real_estate', 'agency', 'cms', 'finance', 'corporate', 'unknown'];
+  const prompt = `Classify this website's type based only on its domain name and page title.
+
+Domain: ${domain}
+Title: ${title || '(no title)'}
+
+Pick ONE type from: ecommerce, marketplace, saas, real_estate, agency, cms, finance, corporate, unknown
+Also pick confidence: low, medium, high
+
+Reply with ONLY valid JSON, no explanation: {"type":"<type>","confidence":"<confidence>"}`;
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'x-api-key': claudeApiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 64,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+    clearTimeout(timer);
+    if (!res.ok) { console.warn(`[LLM CLASSIFY] HTTP ${res.status}`); return null; }
+    const data = await res.json() as { content?: Array<{ type: string; text?: string }> };
+    const text = data.content?.find(c => c.type === 'text')?.text?.trim() ?? '';
+    const parsed = JSON.parse(text) as { type: string; confidence: string };
+    const type = VALID_TYPES.includes(parsed.type as SiteType) ? (parsed.type as SiteType) : 'unknown';
+    const confidence = (['low', 'medium', 'high'] as const).includes(parsed.confidence as 'low' | 'medium' | 'high')
+      ? (parsed.confidence as 'low' | 'medium' | 'high')
+      : 'low';
+    console.log(`[LLM CLASSIFY] result: ${type} (${confidence})`);
+    return { type, confidence };
+  } catch (err) {
+    console.warn('[LLM CLASSIFY] failed:', err instanceof Error ? err.message : err);
+    return null;
   }
 }
 
 /**
- * Full detection pipeline with two fallback layers:
+ * Full detection pipeline with four fallback layers:
  *   1. DuckDuckGo Instant Answer API (works for Wikipedia-known entities)
  *   2. Direct plain-fetch of the site's own HTML meta tags (works for any public site)
+ *   3. robots.txt + sitemap.xml fetch (path-based structural signals)
+ *   4. LLM-based classification (last resort, requires claudeApiKey)
  *
  * Triggered when type=unknown, confidence=low, page-blocked, or empty body.
  */
@@ -1265,7 +1378,8 @@ export async function detectSiteTypeWithFallback(
     blocked?: boolean;
     failed?: boolean;
     bodyLength?: number;
-  }
+  },
+  claudeApiKey?: string,
 ): Promise<DetectionResult> {
   // Always bypass cache if body text is present — ensures fresh data is used
   const cacheKey = extractFullHostname(url) || extractRootDomain(url) || url;
@@ -1329,10 +1443,17 @@ export async function detectSiteTypeWithFallback(
       // DDG Instant Answer only covers Wikipedia-known entities.
       // For unknown/obscure sites, fetch the site's own HTML meta tags directly.
       const meta = await fetchSiteMeta(url);
-      const metaText = [meta.title, meta.description, meta.ogDescription].filter(Boolean).join(' ');
+      const metaText = [meta.title, meta.description, meta.ogDescription, meta.keywords, meta.ogType].filter(Boolean).join(' ');
       if (metaText.trim().length > 0) {
         domainCache.delete(cacheKey);
-        const enriched = detectSiteType(bodyText, url, meta.title || title, meta.description || meta.ogDescription || description, enrichment, crawlStatus);
+        const enriched = detectSiteType(
+          bodyText,
+          url,
+          meta.title || title,
+          meta.description || meta.ogDescription || description,
+          { ...enrichment, searchSnippet: [meta.keywords, meta.ogType, meta.ogSiteName].filter(Boolean).join(' ') || enrichment?.searchSnippet },
+          crawlStatus,
+        );
         console.log(`[SITE TYPE] Meta-fetch enriched: ${enriched.type} (${enriched.confidence})`);
         const isBetter =
           enriched.type !== 'unknown' ||
@@ -1341,6 +1462,51 @@ export async function detectSiteTypeWithFallback(
           result = enriched;
           result.source = 'duckduckgo_fallback';
           result.updatedAt = Date.now();
+          domainCache.set(cacheKey, result as CachedDetectionResult);
+        }
+      }
+
+      // Layer 3: robots.txt + sitemap.xml — path-based structural signals
+      if (result.type === 'unknown' || result.confidence === 'low') {
+        console.log('[SITE TYPE] Trying robots.txt + sitemap.xml fallback');
+        const { robotsText, sitemapText } = await fetchRobotsAndSitemap(url);
+        if (robotsText || sitemapText) {
+          domainCache.delete(cacheKey);
+          const enriched = detectSiteType(
+            bodyText,
+            url,
+            meta.title || title,
+            meta.description || meta.ogDescription || description,
+            { ...enrichment, robotsText: robotsText || enrichment?.robotsText, sitemapText: sitemapText || enrichment?.sitemapText },
+            crawlStatus,
+          );
+          console.log(`[SITE TYPE] Robots/sitemap enriched: ${enriched.type} (${enriched.confidence})`);
+          const isBetter =
+            enriched.type !== 'unknown' ||
+            confidenceRank(enriched.confidence) > confidenceRank(result.confidence);
+          if (isBetter) {
+            result = enriched;
+            result.source = 'duckduckgo_fallback';
+            result.updatedAt = Date.now();
+            domainCache.set(cacheKey, result as CachedDetectionResult);
+          }
+        }
+      }
+
+      // Layer 4: LLM classification — last resort for sites with no retrievable signals
+      if ((result.type === 'unknown' || result.confidence === 'low') && claudeApiKey) {
+        console.log('[SITE TYPE] Trying LLM classification fallback');
+        const llmResult = await llmClassifySite(result.normalizedDomain || url, meta.title || title || '', claudeApiKey);
+        if (llmResult && llmResult.type !== 'unknown') {
+          result = {
+            ...result,
+            type: llmResult.type,
+            confidence: llmResult.confidence,
+            evidence: [...result.evidence, `llm: classified as ${llmResult.type}`],
+            layer: 'llm_fallback',
+            source: 'duckduckgo_fallback',
+            updatedAt: Date.now(),
+          };
           domainCache.set(cacheKey, result as CachedDetectionResult);
         }
       }
