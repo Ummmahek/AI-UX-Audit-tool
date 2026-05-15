@@ -1,4 +1,4 @@
-const { loadIssueLibrary, simpleRetrieveIssues, retrieveRelevantIssues, inferSiteType, getTerminology } = require('../lib/ux');
+const { loadIssueLibrary, simpleRetrieveIssues, retrieveRelevantIssues, getTerminology } = require('../lib/ux');
 (async () => {
   const lib = await loadIssueLibrary();
   const ux052 = lib.find(i => i.issue_id === 'UX-052');
@@ -38,9 +38,7 @@ const { loadIssueLibrary, simpleRetrieveIssues, retrieveRelevantIssues, inferSit
   const wrapper = await retrieveRelevantIssues('https://example.com', 'find house', 10, nonEcomText, '', false);
   console.log('wrapper metadata', { siteType: wrapper.siteType, terminology: wrapper.terminology, applicable: wrapper.applicableCount, total: wrapper.totalCount });
 
-  // quick siteTypeDetection check
-  const det = detectSiteType(nonEcomText, 'https://example.com');
-  console.log('detectSiteType result', det);
+  // site type detection is removed; this script now validates retrieval behavior only.
 
   // sanity-check new crawler helper (won't actually fetch due to offline environment)
   try {

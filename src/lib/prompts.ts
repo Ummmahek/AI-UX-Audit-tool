@@ -53,8 +53,22 @@ REPORT FORMAT & INSTRUCTIONS
 3. SITE TYPE AWARENESS
    This is a ${context.siteType} site:
    ${context.siteType === 'ecommerce' ? '- Focus on product pages, cart, checkout flow' : ''}
-   ${context.siteType === 'real_estate' ? '- Focus on property listings, forms, contact info, NOT checkout/cart' : ''}
+   ${context.siteType === 'marketplace' ? '- Focus on listings, seller profiles, transaction flow' : ''}
    ${context.siteType === 'saas' ? '- Focus on signup, dashboard, pricing pages' : ''}
+   ${context.siteType === 'finance' ? '- Focus on account setup, security, transaction clarity' : ''}
+   ${context.siteType === 'agency' ? '- Focus on portfolio showcase, contact forms, project presentation' : ''}
+   ${context.siteType === 'media' ? '- Focus on content readability, navigation, engagement features' : ''}
+   ${context.siteType === 'social' ? '- Focus on user profiles, feeds, interaction patterns' : ''}
+   ${context.siteType === 'education' ? '- Focus on course discovery, enrollment, learning experience' : ''}
+   ${context.siteType === 'healthcare' ? '- Focus on service clarity, appointment booking, trust signals' : ''}
+   ${context.siteType === 'travel' ? '- Focus on search/booking flow, destination info, reviews' : ''}
+   ${context.siteType === 'real_estate' ? '- Focus on property listings, forms, contact info, NOT checkout/cart' : ''}
+   ${context.siteType === 'gaming' ? '- Focus on game discovery, purchase/play flow, user engagement' : ''}
+   ${context.siteType === 'productivity' ? '- Focus on tool usability, workflow efficiency, feature clarity' : ''}
+   ${context.siteType === 'developer_tools' ? '- Focus on documentation, integration guides, API clarity' : ''}
+   ${context.siteType === 'portfolio' ? '- Focus on work showcase, contact accessibility, professional presentation' : ''}
+   ${context.siteType === 'landing_page' ? '- Focus on conversion elements, value proposition, call-to-action' : ''}
+   ${context.siteType === 'web_app' ? '- Focus on user workflows, feature accessibility, performance' : ''}
    ${context.siteType === 'corporate' ? '- Focus on navigation, content clarity, contact forms' : ''}
 
 ═══════════════════════════════════════════════════════════════

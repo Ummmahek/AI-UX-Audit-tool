@@ -1,6 +1,5 @@
 ﻿import fs from "fs/promises";
 import path from "path";
-import { detectSiteType, detectSiteTypeWithFallback } from "./siteTypeDetection";
 import { buildDynamicSystemPrompt, buildDynamicUserPrompt } from "./prompts";
 
 export type Issue = {
@@ -279,64 +278,6 @@ function inferPageTypes(
 }
 
 /**
- * Retrieves issues using keyword matching (presence track) and page-type inference (absence track),
- * then filters by evidence from crawl excerpts.
- *
- * Presence-track behaviour (detection_type === "presence") keeps existing keyword scoring logic.
- * Absence-track behaviour (detection_type === "absence") bypasses keywordScore() and uses
- * inferred page types plus confidence weight to seed the candidate pool.
- */
-export function inferSiteType(
-  url: string,
-  goal: string,
-  crawlExcerpts?: string,
-  screenshotText?: string,
-): "ecommerce" | "real_estate" | "saas" | "content" | "documentation" | "corporate" | "unknown" {
-  // simple keyword heuristics to categorize the site.  This is intentionally
-  // lightweight since we only care about distinguishing ecommerce vs non-
-  // ecommerce for filtering; additional categories are for future use or
-  // contextual hints in prompts.
-  const hay = `${url} ${goal} ${crawlExcerpts ?? ""} ${screenshotText ?? ""}`.toLowerCase();
-
-  if (/(cart|checkout|add to cart|product|sku|price)/.test(hay)) return "ecommerce";
-  if (/(property|real estate|listing|agent|rent|sale)/.test(hay)) return "real_estate";
-  if (/(dashboard|settings|saas|web application|login|signup|user account)/.test(hay)) return "saas";
-  if (/(article|blog|news|media|category page|post)/.test(hay)) return "content";
-  if (/(documentation|api reference|help center|docs)/.test(hay)) return "documentation";
-  if (/(about us|services|contact us|marketing|corporate)/.test(hay)) return "corporate";
-  return "unknown";
-}
-
-function filterLibraryForSiteType(library: Issue[], siteType: string): Issue[] {
-  if (siteType === "ecommerce" || siteType === "unknown") {
-    return library; // no filtering needed
-  }
-
-  // non-ecommerce sites: allow general issues plus low/medium relevance
-  // ecommerce issues that don't require a cart or checkout.  also apply
-  // hard exclusions by issue_id.
-  const hardExclusions = new Set([
-    "UX-007", "UX-034", "UX-097", // cart-specific
-    "UX-008", "UX-009", "UX-035", "UX-036", "UX-063",
-    "UX-102", "UX-105", "UX-106", "UX-107", // checkout-specific
-  ]);
-
-  return library.filter((issue) => {
-    if (issue.issue_id && hardExclusions.has(issue.issue_id)) return false;
-
-    if (issue.domain === "general") return true;
-    if (issue.domain === "ecommerce") {
-      const rel = String(issue.ecommerce_relevance ?? "").toLowerCase();
-      const lowOrMed = rel === "low" || rel === "medium";
-      const requiresCart = Boolean(issue.requires_cart);
-      const requiresCheckout = Boolean(issue.requires_checkout);
-      return lowOrMed && !requiresCart && !requiresCheckout;
-    }
-    return false;
-  });
-}
-
-/**
  * Return terminology mapping based on site type.  Used for prompt generation
  * and UI metadata.
  */
@@ -349,12 +290,12 @@ export function getTerminology(siteType: string) {
       itemName: 'product',
       itemAction: 'purchase',
     },
-    real_estate: {
-      listingPage: 'Property Listings Page',
-      detailPage: 'Property Details Page',
-      conversionPage: 'Inquiry Forms',
-      itemName: 'property',
-      itemAction: 'inquire',
+    marketplace: {
+      listingPage: 'Marketplace Listings',
+      detailPage: 'Item Details',
+      conversionPage: 'Purchase Flow',
+      itemName: 'item',
+      itemAction: 'buy',
     },
     saas: {
       listingPage: 'Features / Dashboard',
@@ -363,6 +304,112 @@ export function getTerminology(siteType: string) {
       itemName: 'feature',
       itemAction: 'subscribe',
     },
+    finance: {
+      listingPage: 'Services / Products',
+      detailPage: 'Service Details',
+      conversionPage: 'Account Setup',
+      itemName: 'service',
+      itemAction: 'sign up',
+    },
+    agency: {
+      listingPage: 'Portfolio / Services',
+      detailPage: 'Project Details',
+      conversionPage: 'Contact Form',
+      itemName: 'service',
+      itemAction: 'hire',
+    },
+    media: {
+      listingPage: 'Category / Archive Pages',
+      detailPage: 'Article Pages',
+      conversionPage: 'Newsletter Signup',
+      itemName: 'article',
+      itemAction: 'read',
+    },
+    social: {
+      listingPage: 'Feed / Timeline',
+      detailPage: 'Post Details',
+      conversionPage: 'Profile Setup',
+      itemName: 'post',
+      itemAction: 'engage',
+    },
+    education: {
+      listingPage: 'Course Catalog',
+      detailPage: 'Course Details',
+      conversionPage: 'Enrollment',
+      itemName: 'course',
+      itemAction: 'enroll',
+    },
+    healthcare: {
+      listingPage: 'Services Directory',
+      detailPage: 'Service Details',
+      conversionPage: 'Appointment Booking',
+      itemName: 'service',
+      itemAction: 'book',
+    },
+    travel: {
+      listingPage: 'Destinations / Listings',
+      detailPage: 'Booking Details',
+      conversionPage: 'Reservation Flow',
+      itemName: 'booking',
+      itemAction: 'reserve',
+    },
+    real_estate: {
+      listingPage: 'Property Listings Page',
+      detailPage: 'Property Details Page',
+      conversionPage: 'Inquiry Forms',
+      itemName: 'property',
+      itemAction: 'inquire',
+    },
+    gaming: {
+      listingPage: 'Game Library',
+      detailPage: 'Game Details',
+      conversionPage: 'Purchase / Play',
+      itemName: 'game',
+      itemAction: 'play',
+    },
+    productivity: {
+      listingPage: 'Tools / Features',
+      detailPage: 'Tool Details',
+      conversionPage: 'Signup / Trial',
+      itemName: 'tool',
+      itemAction: 'use',
+    },
+    developer_tools: {
+      listingPage: 'API / Tools',
+      detailPage: 'Documentation',
+      conversionPage: 'Signup / Integration',
+      itemName: 'tool',
+      itemAction: 'integrate',
+    },
+    portfolio: {
+      listingPage: 'Work Samples',
+      detailPage: 'Project Details',
+      conversionPage: 'Contact Form',
+      itemName: 'project',
+      itemAction: 'contact',
+    },
+    landing_page: {
+      listingPage: 'Main Content',
+      detailPage: 'Feature Details',
+      conversionPage: 'CTA / Signup',
+      itemName: 'feature',
+      itemAction: 'sign up',
+    },
+    web_app: {
+      listingPage: 'Dashboard / Main',
+      detailPage: 'Feature Pages',
+      conversionPage: 'Signup / Login',
+      itemName: 'feature',
+      itemAction: 'use',
+    },
+    other: {
+      listingPage: 'Main Pages',
+      detailPage: 'Detail Pages',
+      conversionPage: 'Contact / Action',
+      itemName: 'item',
+      itemAction: 'engage',
+    },
+    // Legacy mappings for backward compatibility
     content: {
       listingPage: 'Category / Archive Pages',
       detailPage: 'Article Pages',
@@ -386,37 +433,95 @@ export function getTerminology(siteType: string) {
     },
   };
 
-  return terminologyMap[siteType] || terminologyMap.ecommerce;
+  return terminologyMap[siteType] || terminologyMap.other;
 }
 
 /**
  * Filters an issue list according to site type, excluding cart/checkout when
- * the site is non-ecommerce.  This is intended for use before any vision-
- * based or keyword retrieval steps; it mirrors the logic of
- * filterLibraryForSiteType but operates on arbitrary arrays and logs the
- * filtering event.
+ * not applicable to the site type.
  */
 export function filterApplicableIssues(allIssues: Issue[], siteType: string): Issue[] {
+  if (siteType === 'ecommerce' || siteType === 'marketplace' || siteType === 'unknown') {
+    return allIssues;
+  }
+
+  // For non-ecommerce sites, exclude cart/checkout related issues
   const cartCheckoutIssues = new Set([
-    'UX-007', 'UX-034', 'UX-097', // Cart-specific
-    'UX-008', 'UX-009', 'UX-035', 'UX-036', // Checkout-specific
-    'UX-063', 'UX-102', 'UX-105', 'UX-106', 'UX-107', // Payment/delivery
+    'checkout_process_missing',
+    'cart_abandonment_high',
+    'checkout_form_errors',
+    'payment_method_issues',
+    'shipping_cost_transparency',
+    'cart_persistence_issues',
+    'checkout_progress_indicator',
+    'guest_checkout_option',
+    'order_confirmation_clarity',
+    'cart_icon_visibility',
+    'checkout_button_prominence',
+    'cart_summary_accuracy',
+    'checkout_error_handling',
+    'payment_security_indicators',
+    'order_tracking_access',
+    'cart_item_removal',
+    'checkout_field_validation',
+    'shipping_method_clarity',
+    'tax_calculation_transparency',
+    'checkout_loading_states',
+    'cart_quantity_controls',
+    'checkout_mobile_optimization',
+    'payment_error_recovery',
+    'order_summary_details',
+    'cart_empty_state',
+    'checkout_step_navigation',
+    'payment_method_diversity',
+    'shipping_cost_calculation',
+    'cart_item_editing',
+    'checkout_form_autofill',
+    'payment_confirmation_delay',
+    'order_history_access',
+    'cart_cross_sell_upsell',
+    'checkout_trust_signals',
+    'shipping_restriction_clarity',
+    'cart_save_for_later',
+    'checkout_discount_codes',
+    'payment_retry_mechanism',
+    'order_cancellation_process',
+    'cart_minimum_order',
+    'checkout_address_validation',
+    'payment_partial_processing',
+    'order_status_updates',
+    'cart_wishlist_integration',
+    'checkout_multi_language',
+    'shipping_delivery_estimates',
+    'cart_bulk_operations',
+    'checkout_user_account',
+    'payment_subscription_handling',
+    'order_return_process',
+    'cart_recommendations',
+    'checkout_loyalty_program',
+    'shipping_free_threshold',
+    'cart_comparison_feature',
+    'checkout_guest_account',
+    'payment_wallet_integration',
+    'order_gift_options',
+    'cart_inventory_accuracy',
+    'checkout_brand_consistency',
+    'shipping_carrier_options',
+    'cart_price_matching',
+    'checkout_personalization',
+    'payment_crypto_support',
+    'order_receipt_customization'
   ]);
 
-  if (siteType !== 'ecommerce') {
-    console.log(`[FILTER] Excluding ${cartCheckoutIssues.size} cart/checkout issues for ${siteType} site`);
-    return allIssues.filter((issue) => {
-      if (issue.issue_id && cartCheckoutIssues.has(issue.issue_id)) return false;
-      if (issue.requires_cart || issue.requires_checkout) return false;
-      return true;
-    });
-  }
-  return allIssues;
+  const filtered = allIssues.filter(issue => !cartCheckoutIssues.has(issue.issue_id || ''));
+  console.log(`[FILTER] Excluded ${cartCheckoutIssues.size} cart/checkout issues for ${siteType} site`);
+  return filtered;
 }
 
 /**
- * Higher-level helper used by the API route.  Detects site type, filters the
- * library, retrieves top issues and returns metadata for prompts/UI.
+/**
+ * Higher-level helper used by the API route. Retrieves top issues and returns
+ * metadata for prompts/UI.
  */
 export async function retrieveRelevantIssues(
   url: string,
@@ -436,14 +541,11 @@ export async function retrieveRelevantIssues(
 }> {
   const library = await loadIssueLibrary();
   // use robust detection only when the caller has not already provided a site type
-  const detection = siteTypeOverride
-    ? { type: siteTypeOverride, confidence: 'medium' as const, evidence: [] as string[] }
-    : await detectSiteTypeWithFallback(crawlExcerpts ?? '', url);
-  const siteType = detection.type;
-  const applicableIssues = filterLibraryForSiteType(library, siteType);
+  const siteType = siteTypeOverride ?? 'unknown';
   const terminology = getTerminology(siteType);
+  const filteredLibrary = filterApplicableIssues(library, siteType);
   const retrieved = simpleRetrieveIssues(
-    library,
+    filteredLibrary,
     url,
     goal,
     topK,
@@ -458,7 +560,7 @@ export async function retrieveRelevantIssues(
     issues: retrieved,
     siteType,
     terminology,
-    applicableCount: applicableIssues.length,
+    applicableCount: filteredLibrary.length,
     totalCount: library.length,
   };
 }
@@ -474,8 +576,7 @@ export function simpleRetrieveIssues(
   imageDetected?: ImageDetectedResult[],
   siteTypeOverride?: string,
 ): RetrievedIssue[] {
-  const siteType = siteTypeOverride ?? inferSiteType(url, goal, crawlExcerpts, screenshotText);
-  const filteredLibrary = filterLibraryForSiteType(issueLibrary, siteType);
+  const filteredLibrary = issueLibrary;
 
   const detectionType = (issue: Issue): string =>
     typeof (issue as any).detection_type === "string" ? String((issue as any).detection_type) : "presence";
@@ -780,7 +881,7 @@ Format: [{"issue_id": "UX-XXX", "confidence": "high"|"medium", "evidence": "max 
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          model: "claude-3-haiku-20240307",
+          model: "claude-haiku-4-5",
           max_tokens: 4000,
           messages: [{
             role: "user",
@@ -925,11 +1026,8 @@ export function buildCompanyGroundedMessages(
     dataQuality?: string;
   },
 ): PromptMessage[] {
-  // â”€â”€ Detect site type if not supplied â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // The caller may pass siteType already derived from the crawl; if not, we
-  // infer a lightweight version from the URL alone so the prompt is always
-  // context-aware.
-  const siteType = options?.siteType ?? detectSiteType("", url).type ?? "ecommerce";
+  // Use explicit site type from the caller, otherwise fall back to unknown.
+  const siteType = options?.siteType ?? "unknown";
   const applicableCount = options?.applicableCount ?? retrievedIssues.length;
   const screenshotCount = options?.screenshotCount ?? 0;
 
@@ -1145,7 +1243,7 @@ Return ONLY a JSON array of these objects, one per issue.No other text.`;
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          model: "claude-3-haiku-20240307",
+          model: "claude-haiku-4-5",
           max_tokens: 4000,
           messages: [{
             role: "user",

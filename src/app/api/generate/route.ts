@@ -8,8 +8,6 @@ import {
   loadIssueLibrary,
   simpleRetrieveIssues,
   retrieveRelevantIssues,
-  inferSiteType,
-  filterApplicableIssues,
   validateIssuesWithLLM,
   type ImageDetectedResult,
   type Issue,
@@ -17,7 +15,6 @@ import {
 } from "@/lib/ux";
 import { crawlKeyPaths, type CrawlResult } from "@/lib/crawl";
 import { runDeterministicDetection } from '@/lib/detect';
-import { detectSiteTypeWithFallback } from '@/lib/siteTypeDetection';
 import { deterministicSignalCheck } from '@/lib/signalMatch';
 import { crawlWebsite, shouldUsePlaywright } from '@/lib/crawlPlaywright';
 
@@ -74,6 +71,88 @@ async function fileToDataUrl(file: File): Promise<string> {
   return `data:${mime};base64,${base64}`;
 }
 
+async function detectSiteTypeWithClaude(
+  claudeKey: string,
+  url: string,
+  goal: string,
+  crawlContext: string,
+  screenshotText: string,
+): Promise<string> {
+  const prompt = `Classify this website into ONE category: ecommerce, marketplace, saas, finance, agency, media, social, education, healthcare, travel, real_estate, gaming, productivity, developer_tools, portfolio, landing_page, web_app, other.
+
+URL: ${url}
+Goal: ${goal}
+Context: ${crawlContext || screenshotText || '(none)'}
+
+RULES:
+1. Analyze the website content, domain, brand, and business keywords.
+2. If the site is a crypto exchange, bank, payment platform, or financial service like Coinbase, return finance.
+3. Choose the single best fitting category from the list. If none fit, return other.
+
+Respond with ONLY the category name.`;
+
+
+  const anthropicModels = [
+    "claude-sonnet-4-5",
+    "claude-haiku-4-5",
+    "claude-opus-4-1",
+    "claude-3-5-sonnet-latest",
+    "claude-3-5-haiku-latest",
+  ];
+
+  if (!claudeKey || typeof claudeKey !== "string" || !claudeKey.trim()) {
+    throw new Error("Missing Anthropic API key. Set ANTHROPIC_API_KEY or CLAUDE_API_KEY in your environment.");
+  }
+
+  for (const modelName of anthropicModels) {
+    try {
+      const claudeResponse = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": claudeKey,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          model: modelName,
+          max_tokens: 4096,
+          messages: [
+            {
+              role: "user",
+              content: prompt,
+            },
+          ],
+        }),
+      });
+
+      const claudeData = await claudeResponse.json() as {
+        content?: Array<{ type: string; text?: string }>;
+        error?: { message?: string };
+      };
+
+      console.log("[siteType] Anthropic status:", claudeResponse.status);
+      if (!claudeResponse.ok) {
+        console.warn(`[siteType] Anthropic model ${modelName} failed:`, claudeData.error?.message ?? claudeData);
+        continue;
+      }
+
+      const textPart = claudeData.content?.find((c) => c.type === "text");
+      const text = textPart?.text?.trim() ?? "";
+      const match = text.match(/\b(ecommerce|marketplace|saas|finance|agency|media|social|education|healthcare|travel|real_estate|gaming|productivity|developer_tools|portfolio|landing_page|web_app|other)\b/i);
+      if (match) {
+        return match[1].toLowerCase();
+      }
+
+      console.warn(`[siteType] Claude ${modelName} returned unparseable site type:`, text);
+    } catch (error) {
+      console.warn("[siteType] Claude classification failed:", error);
+      continue;
+    }
+  }
+
+  return "unknown";
+}
+
 // Temporary helper: build a plain-text representation of screenshots for
 // retrieval purposes. Tesseract OCR has been removed — structural detection
 // is now handled by Playwright DOM checks and visual evidence comes through
@@ -126,6 +205,10 @@ export async function POST(request: Request) {
     model = parsed.model ?? "openrouter/auto";
     screenshots = parsed.screenshots ?? [];
     hasScreenshots = Array.isArray(screenshots) && screenshots.length > 0;
+
+    const anthropicKey = process.env.ANTHROPIC_API_KEY ?? process.env.CLAUDE_API_KEY;
+    const openRouterKey = process.env.OPENROUTER_API_KEY;
+    let siteType = 'unknown';
 
     if (!url || !goal) {
       return NextResponse.json(
@@ -230,19 +313,11 @@ export async function POST(request: Request) {
         }\n---\n`;
     }
 
-    const claudeKey = process.env.CLAUDE_API_KEY;
-    const openRouterKey = process.env.OPENROUTER_API_KEY;
-
     // Evidence-aware retrieval: run after crawl so retrieval can use crawl excerpts
     let retrieved: RetrievedIssue[] = [];
     let suppressedIssues: Array<{ issue: RetrievedIssue; reason: string }> = [];
     let imageDetectedResults: ImageDetectedResult[] = [];
     let metadata: any = {}; // added for site type/terminology info
-    let siteTypeDetection: { type: string; confidence: 'high' | 'medium' | 'low'; evidence: string[] } = {
-      type: 'corporate',
-      confidence: 'low',
-      evidence: [],
-    };
 
     if (useCompany) {
       try {
@@ -257,32 +332,11 @@ export async function POST(request: Request) {
         allScreenshotUrls.push(...userScreenshotUrls);
         hasScreenshots = allScreenshotUrls.length > 0;
 
-        // detect site type EARLY using clean crawl text, not wrapper context
-        const siteTypeText = crawlResult.pages
-          .map((p) => p.excerpt ?? '')
-          .filter(Boolean)
-          .join('\n\n');
-        const normalizedUrl = url; // assuming url is already normalized, or we can normalize it
-        siteTypeDetection = await detectSiteTypeWithFallback(
-          siteTypeText,
-          normalizedUrl,
-          undefined,
-          undefined,
-          {},
-          crawlStatus,
-          claudeKey || undefined,
-        );
-        console.log(`[API] Site Type: ${siteTypeDetection.type} (${siteTypeDetection.confidence})`);
-
-        // filter applicable issues before any vision pass
-        const applicableIssues = filterApplicableIssues(issueLibrary, siteTypeDetection.type);
-        console.log(`[API] Filtered: ${applicableIssues.length}/${issueLibrary.length} issues applicable`);
-
         // Image-led detection pass (before retrieval) when screenshots are present
-        if (hasScreenshots && (claudeKey || openRouterKey)) {
+        if (hasScreenshots && (anthropicKey || openRouterKey)) {
           try {
-            const apiKey = claudeKey || openRouterKey!;
-            const useClaude = Boolean(claudeKey);
+            const apiKey = anthropicKey || openRouterKey!;
+            const useClaude = Boolean(anthropicKey);
             const screenshotUrls = [...allScreenshotUrls];
 
 
@@ -302,7 +356,7 @@ export async function POST(request: Request) {
               deterministicIssues.map((i) => i.issue_id),
             );
 
-            let visionLibrary = applicableIssues.filter(
+            let visionLibrary = issueLibrary.filter(
               (issue) =>
                 !!issue.issue_id &&
                 !PURELY_DOM_CHECKABLE_IDS.has(issue.issue_id) &&
@@ -393,8 +447,16 @@ export async function POST(request: Request) {
           }
         }
 
-        // use the already-detected site type from crawl content instead of re-detecting later
-        const siteType = siteTypeDetection.type;
+        // default site type to unknown until an Anthropic override is available
+        if (anthropicKey) {
+          siteType = await detectSiteTypeWithClaude(
+            anthropicKey,
+            url,
+            goal,
+            crawlContext,
+            screenshotText,
+          );
+        }
         console.log(`[API] inferred site type: ${siteType}`);
 
         // use enhanced retrieval helper which also returns site type & terminology
@@ -415,8 +477,6 @@ export async function POST(request: Request) {
           terminology: retrievalResult.terminology,
           applicableIssues: retrievalResult.applicableCount,
           totalIssues: retrievalResult.totalCount,
-          confidence: siteTypeDetection.confidence,
-          evidence: siteTypeDetection.evidence,
           issuesRetrieved: retrieved.length,
           accessBlocked: crawlResult.blockedOrLimited,
         };
@@ -460,7 +520,7 @@ export async function POST(request: Request) {
       }
     }
 
-    if (!claudeKey && !openRouterKey) {
+    if (!anthropicKey && !openRouterKey) {
       return NextResponse.json({
         report: SAMPLE_REPORT,
         retrievedIssues: retrieved,
@@ -469,7 +529,7 @@ export async function POST(request: Request) {
         usedMock: true,
         model,
         usedCompany: useCompany,
-        note: "Set CLAUDE_API_KEY or OPENROUTER_API_KEY to generate live reports.",
+        note: "Set ANTHROPIC_API_KEY or OPENROUTER_API_KEY to generate live reports.",
       });
     }
 
@@ -576,7 +636,7 @@ export async function POST(request: Request) {
 
     const messages = useCompany
       ? buildCompanyGroundedMessages(url, goal, validatedIssues, suppressedIssues, {
-          siteType: siteTypeDetection.type,
+          siteType,
           applicableCount: retrieved.length,
           screenshotCount: allScreenshotUrls.length,
         })
@@ -601,6 +661,7 @@ export async function POST(request: Request) {
 
     let report = "";
     let usedModelName = model;
+    let usedProvider = anthropicKey ? "anthropic" : "openrouter";
 
     function dedupeReportText(text: string): string {
       // Split the report into loose "paragraphs" (blocks separated by two or
@@ -662,43 +723,38 @@ export async function POST(request: Request) {
       return finalParts.join("\n\n");
     }
 
-    // Try Claude first if a CLAUDE_API_KEY is present, but fall back to OpenRouter on error
-    if (claudeKey) {
+    // Try Anthropic first if an API key is present, but fall back to OpenRouter on error
+    if (anthropicKey) {
       // clear log: duplicate issues will also be pruned from the text afterwards
       try {
-        // Try multiple model names in order (based on your rate limits: Claude Sonnet Active, Claude Haiku Active, etc.)
-        const modelNames = [
-          "claude-3-5-haiku-20241022",
-          "claude-3-haiku-20240307",
-          "claude-3-sonnet-20240229",
-          "claude-3-opus-20240229",
+        const anthropicModels = [
+          "claude-sonnet-4-5",
+          "claude-haiku-4-5",
+          "claude-opus-4-1",
+          "claude-3-5-sonnet-latest",
+          "claude-3-5-haiku-latest",
         ];
 
         let lastError: Error | null = null;
-        for (const modelName of modelNames) {
+        for (const modelName of anthropicModels) {
           try {
-            console.log(`[API] Trying Claude model: ${modelName}`);
+            console.log(`[API] Trying Anthropic model: ${modelName}`);
             const claudeResponse = await fetch("https://api.anthropic.com/v1/messages", {
               method: "POST",
               headers: {
-                "x-api-key": claudeKey,
+                "x-api-key": anthropicKey,
                 "anthropic-version": "2023-06-01",
                 "content-type": "application/json",
               },
               body: JSON.stringify({
                 model: modelName,
-                max_tokens: 4000,
+                max_tokens: 4096,
                 messages: [
                   {
                     role: "user",
-                    content: [
-                      {
-                        type: "text",
-                        text: hasScreenshots
-                          ? `${prompt}\n\nNote: Screenshots were uploaded for this audit. Use them as the primary source of visual evidence where relevant, but the raw image data is not included here.`
-                          : prompt,
-                      },
-                    ],
+                    content: hasScreenshots
+                      ? `${prompt}\n\nNote: Screenshots were uploaded for this audit. Use them as the primary source of visual evidence where relevant, but the raw image data is not included here.`
+                      : prompt,
                   },
                 ],
               }),
@@ -711,15 +767,15 @@ export async function POST(request: Request) {
             };
 
             if (!claudeResponse.ok) {
-              console.log(`[API] Model ${modelName} failed:`, claudeData.error?.message);
+              console.warn(`[API] Anthropic model ${modelName} failed:`, claudeData.error?.message ?? claudeData);
               lastError = new Error(claudeData.error?.message || `Model ${modelName} not available`);
               continue; // Try next model
             }
 
             const textPart = claudeData.content?.find((c) => c.type === "text");
-            report = textPart?.text ?? "No text returned from Claude.";
+            report = textPart?.text ?? "No text returned from Anthropic.";
             usedModelName = modelName;
-            console.log(`[API] Successfully used Claude model: ${modelName}`);
+            console.log(`[API] Successfully used Anthropic model: ${modelName}`);
             break; // Success, exit loop
           } catch (e) {
             lastError = e instanceof Error ? e : new Error(String(e));
@@ -728,14 +784,14 @@ export async function POST(request: Request) {
         }
 
         if (!report) {
-          throw lastError || new Error("All Claude models failed");
+          throw lastError || new Error("All Anthropic models failed");
         }
       } catch (e) {
-        console.error("[API] Claude call failed, falling back to OpenRouter:", e);
+        console.error("[API] Anthropic call failed, falling back to OpenRouter:", e);
       }
     }
 
-    // If Claude was not used or failed, use OpenRouter as before
+    // If Anthropic was not used or failed, use OpenRouter as before
     if (!report) {
       const apiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
@@ -780,6 +836,7 @@ export async function POST(request: Request) {
       report =
         responseData.choices?.[0]?.message?.content || "No text returned from the model.";
       usedModelName = "openrouter/auto";
+      usedProvider = "openrouter";
     }
 
     // enforce deduplication on the generated report text itself
@@ -811,6 +868,7 @@ export async function POST(request: Request) {
       })),
       usedMock: false,
       model: usedModelName,
+      provider: usedProvider,
       usedCompany: useCompany,
     });
   } catch (error: unknown) {
